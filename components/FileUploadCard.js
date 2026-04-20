@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { FileText, FileUp, Loader2, ShieldCheck, UploadCloud } from "lucide-react";
+import { FileText, FileUp, Loader2, RotateCcw, ShieldCheck, UploadCloud } from "lucide-react";
 import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn, formatBytes, formatDateTime } from "@/lib/utils";
 
-export default function FileUploadCard({ onFiles, recentFiles = [], parsing = false }) {
+export default function FileUploadCard({ onFiles, recentFiles = [], parsing = false, onReset, canReset = false }) {
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
 
@@ -21,19 +21,25 @@ export default function FileUploadCard({ onFiles, recentFiles = [], parsing = fa
   };
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden border-primary/20">
       <CardHeader className="border-b bg-muted/20 pb-4">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <FileText className="h-5 w-5" />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <FileText className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <CardTitle>Upload Nmap Output</CardTitle>
+              <CardDescription className="mt-1">Normal text .nmap files only. Parsing stays in this browser.</CardDescription>
+            </div>
           </div>
-          <div className="min-w-0">
-            <CardTitle>Upload Nmap Output</CardTitle>
-            <CardDescription className="mt-1">Normal text .nmap files only. Parsing stays in this browser.</CardDescription>
-          </div>
+          <Button variant="outline" size="sm" className="gap-2" disabled={!canReset} onClick={onReset}>
+            <RotateCcw className="h-4 w-4" />
+            Reset old data
+          </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 p-5">
         <motion.div
           onDragOver={(event) => {
             event.preventDefault();
@@ -41,13 +47,14 @@ export default function FileUploadCard({ onFiles, recentFiles = [], parsing = fa
           }}
           onDragLeave={() => setDragging(false)}
           onDrop={handleDrop}
-          whileHover={{ scale: 1.005 }}
+          whileHover={{ scale: 1.003 }}
           className={cn(
-            "mt-5 flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center transition-colors",
+            "relative flex min-h-52 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border border-dashed p-6 text-center transition-colors",
             dragging ? "border-primary bg-primary/10" : "border-border bg-background hover:bg-muted/35"
           )}
           onClick={() => inputRef.current?.click()}
         >
+          <div className="absolute inset-x-0 top-0 h-1 bg-primary" />
           <input
             ref={inputRef}
             type="file"
@@ -63,15 +70,15 @@ export default function FileUploadCard({ onFiles, recentFiles = [], parsing = fa
           {parsing ? (
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           ) : (
-            <div className="flex h-14 w-14 items-center justify-center rounded-lg border bg-muted/30 text-primary">
-              <UploadCloud className="h-7 w-7" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-lg border bg-muted/30 text-primary shadow-sm">
+              <UploadCloud className="h-8 w-8" />
             </div>
           )}
-          <p className="mt-4 text-sm font-medium">Choose files or drag them here</p>
+          <p className="mt-4 text-base font-semibold">Drop scan files here</p>
           <p className="mt-2 max-w-md text-xs leading-5 text-muted-foreground">
-            Plain text output from commands such as nmap -p- -sSVC -O --script=default,vuln -oA scan_result.
+            Upload one or more .nmap files from normal text output. Host, port, NSE, CVE, and OS details are parsed instantly.
           </p>
-          <Button type="button" variant="outline" size="sm" className="mt-4 gap-2">
+          <Button type="button" variant="default" size="sm" className="mt-4 gap-2">
             <FileUp className="h-4 w-4" />
             Select .nmap files
           </Button>
@@ -104,7 +111,7 @@ export default function FileUploadCard({ onFiles, recentFiles = [], parsing = fa
                     {formatBytes(scan.fileSize)} · {formatDateTime(scan.uploadedAt)}
                   </p>
                 </div>
-                <span className="shrink-0 text-xs text-muted-foreground">{scan.summary?.hosts || 0} hosts</span>
+                <span className="shrink-0 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">{scan.summary?.hosts || 0} hosts</span>
               </div>
             ))}
           </div>

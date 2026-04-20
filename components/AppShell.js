@@ -2,14 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  BarChart3,
   Braces,
   Bug,
+  Database,
   FileClock,
-  HardDrive,
   Home,
   Layers3,
   Printer,
+  RotateCcw,
+  ScanSearch,
   Server,
   ShieldAlert
 } from "lucide-react";
@@ -34,7 +35,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { applyFilters, buildDataset, DEFAULT_FILTERS } from "@/lib/analytics";
 import { mockScans } from "@/lib/mockData";
 import { clearStoredScans, loadStoredScans, saveStoredScans } from "@/lib/storage";
-import { cn, formatDateTime } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 import { parseNmapText } from "@/parser/nmapTextParser";
 
 const views = [
@@ -141,6 +142,13 @@ function DashboardApp() {
     toast({ title: "Stored scans cleared", description: "Preview data is visible again.", variant: "success" });
   };
 
+  const resetOldData = () => {
+    if (!scans.length) return;
+    const confirmed = window.confirm("Reset all stored scan data and filters from this browser?");
+    if (!confirmed) return;
+    clearScans();
+  };
+
   const toggleSeverityFilter = (severity) => {
     setFilters((current) => ({
       ...current,
@@ -154,28 +162,56 @@ function DashboardApp() {
     if (activeView === "overview") {
       return (
         <div className="space-y-6">
-          <div className="grid gap-4 xl:grid-cols-[420px_1fr]">
-            <FileUploadCard onFiles={handleFiles} recentFiles={scans} parsing={parsing} />
-            <Card>
-              <CardHeader>
-                <CardTitle>Scan Scope</CardTitle>
-                <CardDescription>Current filters update every chart, table, and export.</CardDescription>
+          <div className="grid gap-4 xl:grid-cols-[minmax(360px,520px)_1fr]">
+            <FileUploadCard
+              onFiles={handleFiles}
+              recentFiles={scans}
+              parsing={parsing}
+              onReset={resetOldData}
+              canReset={Boolean(scans.length)}
+            />
+            <Card className="overflow-hidden">
+              <CardHeader className="border-b bg-muted/20">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <CardTitle>Session Console</CardTitle>
+                    <CardDescription>Current filters update every chart, table, and export.</CardDescription>
+                  </div>
+                  <Badge variant={isPreview ? "secondary" : "default"}>{isPreview ? "Preview mode" : "Local data"}</Badge>
+                </div>
               </CardHeader>
-              <CardContent className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-lg border p-3">
+              <CardContent className="grid gap-3 p-5 sm:grid-cols-2">
+                <div className="rounded-lg border bg-background p-4">
                   <p className="text-xs uppercase text-muted-foreground">Latest upload</p>
                   <p className="mt-1 truncate font-semibold">
                     {scans[0]?.fileName || "Preview data"}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">{formatDateTime(scans[0]?.uploadedAt || mockScans[0]?.uploadedAt)}</p>
                 </div>
-                <div className="rounded-lg border p-3">
+                <div className="rounded-lg border bg-background p-4">
                   <p className="text-xs uppercase text-muted-foreground">Nmap version</p>
                   <p className="mt-1 font-semibold">{activeScans[0]?.nmapVersion || "Unknown"}</p>
                 </div>
-                <div className="rounded-lg border p-3 sm:col-span-2">
+                <div className="rounded-lg border bg-background p-4 sm:col-span-2">
                   <p className="text-xs uppercase text-muted-foreground">Command</p>
-                  <p className="mt-1 break-words text-sm">{activeScans[0]?.command || "Command metadata unavailable"}</p>
+                  <pre className="mt-2 max-h-28 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-muted p-3 text-xs leading-5">
+                    {activeScans[0]?.command || "Command metadata unavailable"}
+                  </pre>
+                </div>
+                <div className="rounded-lg border bg-background p-4">
+                  <p className="text-xs uppercase text-muted-foreground">Stored scans</p>
+                  <p className="mt-1 text-2xl font-semibold">{scans.length}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Reset removes browser-stored scan history.</p>
+                </div>
+                <div className="flex flex-col justify-between gap-3 rounded-lg border bg-background p-4">
+                  <div>
+                    <p className="text-xs uppercase text-muted-foreground">Data controls</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Clear old uploads before starting a fresh review.</p>
+                  </div>
+                  <Button variant="destructive" size="sm" className="gap-2 self-start" disabled={!scans.length} onClick={resetOldData}>
+                    <RotateCcw className="h-4 w-4" />
+                    Reset old data
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -251,67 +287,41 @@ function DashboardApp() {
 
   return (
     <div className="min-h-screen bg-background app-grid">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r bg-background/95 px-4 py-5 backdrop-blur lg:block">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <HardDrive className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="font-semibold">Nmap Insight</p>
-            <p className="text-xs text-muted-foreground">Dashboard</p>
-          </div>
-        </div>
-
-        <nav className="mt-8 space-y-1">
-          {views.map((view) => {
-            const Icon = view.icon;
-            return (
-              <button
-                key={view.id}
-                type="button"
-                onClick={() => setActiveView(view.id)}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors focus-ring",
-                  activeView === view.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {view.label}
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="mt-8 rounded-lg border p-3 text-sm">
-          <p className="font-medium">Local mode</p>
-          <p className="mt-1 text-muted-foreground">Parsing and storage stay in this browser.</p>
-          {isPreview ? <Badge className="mt-3" variant="secondary">Preview data</Badge> : null}
-        </div>
-      </aside>
-
-      <div className="lg:pl-72">
-        <header className="border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <div className="flex flex-col gap-3 px-4 py-4 lg:px-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5 text-primary" />
-                  <h1 className="text-xl font-semibold">Nmap Insight Dashboard</h1>
+      <header className="border-b bg-background/92 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <ScanSearch className="h-6 w-6" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl font-semibold tracking-normal">Nmap Insight Dashboard</h1>
+                  <Badge variant={isPreview ? "secondary" : "default"}>{isPreview ? "Preview" : "Live local"}</Badge>
                 </div>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Normal text .nmap parsing, vulnerability extraction, and scan comparison.
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+                  Upload normal text .nmap files, triage NSE findings, and keep scan evidence local to this browser.
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" className="gap-2" onClick={() => window.print()}>
-                  <Printer className="h-4 w-4" />
-                  Print
-                </Button>
-                <ExportMenu dataset={dataset} filteredDataset={filteredDataset} />
-                <ThemeToggle theme={theme} onChange={setTheme} />
-              </div>
             </div>
-            <nav className="flex gap-2 overflow-x-auto pb-1 lg:hidden">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="hidden items-center gap-2 rounded-lg border bg-muted/20 px-3 py-2 text-xs text-muted-foreground sm:flex">
+                <Database className="h-4 w-4 text-primary" />
+                {scans.length ? `${scans.length} stored scans` : "Preview dataset"}
+              </div>
+              <Button variant="destructive" className="gap-2" disabled={!scans.length} onClick={resetOldData}>
+                <RotateCcw className="h-4 w-4" />
+                Reset old data
+              </Button>
+              <Button variant="outline" className="gap-2" onClick={() => window.print()}>
+                <Printer className="h-4 w-4" />
+                Print
+              </Button>
+              <ExportMenu dataset={dataset} filteredDataset={filteredDataset} />
+              <ThemeToggle theme={theme} onChange={setTheme} />
+            </div>
+          </div>
+          <nav className="flex gap-2 overflow-x-auto rounded-lg border bg-muted/20 p-2">
               {views.map((view) => {
                 const Icon = view.icon;
                 return (
@@ -327,16 +337,15 @@ function DashboardApp() {
                   </Button>
                 );
               })}
-            </nav>
-          </div>
-        </header>
+          </nav>
+        </div>
+      </header>
 
-        <FilterToolbar filters={filters} options={dataset.options} onChange={setFilters} />
+      <FilterToolbar filters={filters} options={dataset.options} onChange={setFilters} />
 
-        <main className="px-4 py-6 lg:px-6 print:px-0">
-          {renderView()}
-        </main>
-      </div>
+      <main className="mx-auto max-w-[1600px] px-4 py-6 lg:px-6 print:px-0">
+        {renderView()}
+      </main>
 
       <HostDetailsDrawer host={selectedHost} open={Boolean(selectedHost)} onOpenChange={(open) => !open && setSelectedHost(null)} />
       <VulnerabilityDetailsDrawer
