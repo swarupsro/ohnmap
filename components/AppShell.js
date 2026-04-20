@@ -141,6 +141,15 @@ function DashboardApp() {
     toast({ title: "Stored scans cleared", description: "Preview data is visible again.", variant: "success" });
   };
 
+  const toggleSeverityFilter = (severity) => {
+    setFilters((current) => ({
+      ...current,
+      severities: current.severities.includes(severity)
+        ? current.severities.filter((item) => item !== severity)
+        : [...current.severities, severity]
+    }));
+  };
+
   const renderView = () => {
     if (activeView === "overview") {
       return (
@@ -188,7 +197,13 @@ function DashboardApp() {
             </Card>
           ) : null}
 
-          <OverviewDashboard dataset={filteredDataset} isPreview={isPreview} />
+          <OverviewDashboard
+            dataset={filteredDataset}
+            isPreview={isPreview}
+            activeSeverities={filters.severities}
+            onSeverityToggle={toggleSeverityFilter}
+            onOpenView={setActiveView}
+          />
         </div>
       );
     }

@@ -1,10 +1,13 @@
 "use client";
 
 import {
+  Activity,
   AlertTriangle,
+  ArrowRight,
   Bug,
   FileText,
   Network,
+  Radar,
   Server,
   ShieldAlert,
   ShieldCheck,
@@ -26,7 +29,9 @@ import {
 import EmptyState from "@/components/EmptyState";
 import SeverityBadge from "@/components/SeverityBadge";
 import StatsCard from "@/components/StatsCard";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { SEVERITIES } from "@/utils/severityMapper";
 
 const severityColors = {
@@ -69,7 +74,29 @@ function SimpleTooltip({ active, payload, label }) {
   );
 }
 
-export default function OverviewDashboard({ dataset, isPreview }) {
+function SeverityFilterCard({ severity, count, active, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "group rounded-lg border bg-card p-4 text-left transition-colors focus-ring hover:border-primary/60 hover:bg-muted/35",
+        active && "border-primary bg-primary/10"
+      )}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <SeverityBadge severity={severity} />
+        <span className="text-3xl font-semibold">{count}</span>
+      </div>
+      <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+        <span>{active ? "Filter active" : "Click to filter"}</span>
+        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+      </div>
+    </button>
+  );
+}
+
+export default function OverviewDashboard({ dataset, isPreview, activeSeverities = [], onSeverityToggle, onOpenView }) {
   const { stats } = dataset;
 
   if (!dataset.hosts.length) {
@@ -87,21 +114,96 @@ export default function OverviewDashboard({ dataset, isPreview }) {
         </Card>
       ) : null}
 
+      <Card className="overflow-hidden">
+        <CardContent className="grid gap-5 p-5 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="flex min-h-48 flex-col justify-between rounded-lg border bg-muted/20 p-5">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-lg border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
+                <Radar className="h-3.5 w-3.5 text-primary" />
+                Current scan posture
+              </div>
+              <h2 className="mt-5 max-w-2xl text-3xl font-semibold leading-tight">
+                {stats.totalVulnerabilities ? `${stats.totalVulnerabilities} findings need triage` : "No extracted vulnerabilities in scope"}
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+                Use the cards below as filters, then drill into hosts, services, CVEs, and raw NSE evidence.
+              </p>
+            </div>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <Button size="sm" className="gap-2" onClick={() => onOpenView?.("vulnerabilities")}>
+                Review findings
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="outline" className="gap-2" onClick={() => onOpenView?.("hosts")}>
+                Open hosts
+                <Server className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <div className="rounded-lg border p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">Reachable hosts</p>
+                <Activity className="h-4 w-4 text-primary" />
+              </div>
+              <p className="mt-3 text-3xl font-semibold">{stats.hostsUp}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{stats.hostsDown} down or unavailable</p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">Exposure surface</p>
+                <Network className="h-4 w-4 text-primary" />
+              </div>
+              <p className="mt-3 text-3xl font-semibold">{stats.totalOpenPorts}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{stats.topServices[0]?.name || "No service"} is most common</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatsCard title="Uploaded Scans" value={stats.totalScans} icon={FileText} detail="Parsed files in scope" />
-        <StatsCard title="Total Hosts" value={stats.totalHosts} icon={Server} detail={`${stats.hostsUp} up · ${stats.hostsDown} down`} />
-        <StatsCard title="Open Ports" value={stats.totalOpenPorts} icon={Network} detail="Open services found" tone="teal" />
-        <StatsCard title="Vulnerabilities" value={stats.totalVulnerabilities} icon={ShieldAlert} detail={`${stats.totalCves} unique CVEs`} tone="rose" />
+        <StatsCard
+          title="Uploaded Scans"
+          value={stats.totalScans}
+          icon={FileText}
+          detail="Parsed files in scope"
+          onClick={() => onOpenView?.("history")}
+        />
+        <StatsCard
+          title="Total Hosts"
+          value={stats.totalHosts}
+          icon={Server}
+          detail={`${stats.hostsUp} up · ${stats.hostsDown} down`}
+          onClick={() => onOpenView?.("hosts")}
+        />
+        <StatsCard
+          title="Open Ports"
+          value={stats.totalOpenPorts}
+          icon={Network}
+          detail="Open services found"
+          tone="teal"
+          onClick={() => onOpenView?.("services")}
+        />
+        <StatsCard
+          title="Vulnerabilities"
+          value={stats.totalVulnerabilities}
+          icon={ShieldAlert}
+          detail={`${stats.totalCves} unique CVEs`}
+          tone="rose"
+          onClick={() => onOpenView?.("vulnerabilities")}
+        />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {SEVERITIES.map((severity) => (
-          <Card key={severity}>
-            <CardContent className="flex items-center justify-between p-4">
-              <SeverityBadge severity={severity} />
-              <span className="text-2xl font-semibold">{stats.severityCounts[severity] || 0}</span>
-            </CardContent>
-          </Card>
+          <SeverityFilterCard
+            key={severity}
+            severity={severity}
+            count={stats.severityCounts[severity] || 0}
+            active={activeSeverities.includes(severity)}
+            onClick={() => onSeverityToggle?.(severity)}
+          />
         ))}
       </div>
 
