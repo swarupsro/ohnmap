@@ -17,6 +17,30 @@ module.exports = {
       }
     },
     extend: {
+      fontFamily: {
+        sans: [
+          "Cascadia Code",
+          "Cascadia Mono",
+          "JetBrains Mono",
+          "Fira Code",
+          "SFMono-Regular",
+          "Consolas",
+          "Liberation Mono",
+          "Menlo",
+          "monospace"
+        ],
+        mono: [
+          "Cascadia Code",
+          "Cascadia Mono",
+          "JetBrains Mono",
+          "Fira Code",
+          "SFMono-Regular",
+          "Consolas",
+          "Liberation Mono",
+          "Menlo",
+          "monospace"
+        ]
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    --font-hacker: "Cascadia Code", "Cascadia Mono", "JetBrains Mono", "Fira Code", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
     --background: 220 20% 97%;
     --foreground: 222 15% 11%;
     --card: 0 0% 100%;
@@ -58,6 +59,36 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: var(--font-hacker);
+    font-feature-settings: "zero" 1, "tnum" 1, "ss01" 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+
+  button,
+  input,
+  select,
+  textarea,
+  table,
+  pre,
+  code,
+  kbd,
+  samp {
+    font-family: var(--font-hacker);
+    font-feature-settings: "zero" 1, "tnum" 1, "ss01" 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-hacker);
+    font-feature-settings: "zero" 1, "tnum" 1, "ss01" 1;
+    letter-spacing: 0;
   }
 
   ::selection {
@@ -102,6 +133,13 @@
   .table-scroll {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted-foreground) / 0.55) transparent;
+  }
+
+  .recharts-wrapper,
+  .recharts-text,
+  .recharts-tooltip-wrapper {
+    font-family: var(--font-hacker) !important;
+    font-feature-settings: "zero" 1, "tnum" 1;
   }
 }
 
