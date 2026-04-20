@@ -96,7 +96,7 @@ export default function FilterToolbar({ filters, options, onChange, className })
             <Input
               value={filters.query}
               onChange={(event) => update({ query: event.target.value })}
-              className="h-11 pl-9"
+              className="h-11 border-primary/20 bg-background/90 pl-9 font-mono"
               placeholder="Search hosts, services, CVEs, titles, scripts, evidence"
             />
           </div>

@@ -27,7 +27,7 @@ export default function StatsCard({ title, value, icon: Icon, detail, tone = "de
     >
       <Card
         className={cn(
-          "h-full overflow-hidden transition-colors",
+          "terminal-surface h-full overflow-hidden transition-colors",
           onClick && "hover:border-primary/60 hover:bg-muted/35",
           active && "border-primary bg-primary/10"
         )}
@@ -35,7 +35,7 @@ export default function StatsCard({ title, value, icon: Icon, detail, tone = "de
         <CardContent className="flex min-h-28 items-center justify-between gap-4 p-5">
           <div>
             <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="mt-2 text-3xl font-semibold tracking-normal">{value}</p>
+            <p className="mt-2 font-mono text-3xl font-semibold tracking-normal">{value}</p>
             {detail ? <p className="mt-1 text-xs text-muted-foreground">{detail}</p> : null}
           </div>
           {Icon ? (

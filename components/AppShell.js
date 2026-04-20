@@ -33,7 +33,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { applyFilters, buildDataset, DEFAULT_FILTERS } from "@/lib/analytics";
-import { mockScans } from "@/lib/mockData";
 import { clearStoredScans, loadStoredScans, saveStoredScans } from "@/lib/storage";
 import { formatDateTime } from "@/lib/utils";
 import { parseNmapText } from "@/parser/nmapTextParser";
@@ -78,8 +77,8 @@ function DashboardApp() {
     saveStoredScans(scans);
   }, [scans]);
 
-  const isPreview = scans.length === 0;
-  const activeScans = isPreview ? mockScans : scans;
+  const isEmpty = scans.length === 0;
+  const activeScans = scans;
   const dataset = useMemo(() => buildDataset(activeScans), [activeScans]);
   const filteredDataset = useMemo(() => applyFilters(dataset, filters), [dataset, filters]);
 
@@ -139,7 +138,7 @@ function DashboardApp() {
     setScans([]);
     clearStoredScans();
     setFilters(DEFAULT_FILTERS);
-    toast({ title: "Stored scans cleared", description: "Preview data is visible again.", variant: "success" });
+    toast({ title: "Stored scans cleared", description: "Dashboard scope is empty.", variant: "success" });
   };
 
   const resetOldData = () => {
@@ -170,23 +169,23 @@ function DashboardApp() {
               onReset={resetOldData}
               canReset={Boolean(scans.length)}
             />
-            <Card className="overflow-hidden">
+            <Card className="terminal-surface overflow-hidden">
               <CardHeader className="border-b bg-muted/20">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <CardTitle>Session Console</CardTitle>
-                    <CardDescription>Current filters update every chart, table, and export.</CardDescription>
+                    <CardTitle>Target Intake Console</CardTitle>
+                    <CardDescription>Parse scope, command metadata, and local data controls.</CardDescription>
                   </div>
-                  <Badge variant={isPreview ? "secondary" : "default"}>{isPreview ? "Preview mode" : "Local data"}</Badge>
+                  <Badge variant={isEmpty ? "outline" : "default"}>{isEmpty ? "Ready" : "Local data"}</Badge>
                 </div>
               </CardHeader>
               <CardContent className="grid gap-3 p-5 sm:grid-cols-2">
                 <div className="rounded-lg border bg-background p-4">
                   <p className="text-xs uppercase text-muted-foreground">Latest upload</p>
                   <p className="mt-1 truncate font-semibold">
-                    {scans[0]?.fileName || "Preview data"}
+                    {scans[0]?.fileName || "No scan uploaded"}
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">{formatDateTime(scans[0]?.uploadedAt || mockScans[0]?.uploadedAt)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{scans[0]?.uploadedAt ? formatDateTime(scans[0]?.uploadedAt) : "Waiting for first scan"}</p>
                 </div>
                 <div className="rounded-lg border bg-background p-4">
                   <p className="text-xs uppercase text-muted-foreground">Nmap version</p>
@@ -206,7 +205,7 @@ function DashboardApp() {
                 <div className="flex flex-col justify-between gap-3 rounded-lg border bg-background p-4">
                   <div>
                     <p className="text-xs uppercase text-muted-foreground">Data controls</p>
-                    <p className="mt-1 text-sm text-muted-foreground">Clear old uploads before starting a fresh review.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Clear old uploads before starting a fresh review.</p>
                   </div>
                   <Button variant="destructive" size="sm" className="gap-2 self-start" disabled={!scans.length} onClick={resetOldData}>
                     <RotateCcw className="h-4 w-4" />
@@ -235,7 +234,7 @@ function DashboardApp() {
 
           <OverviewDashboard
             dataset={filteredDataset}
-            isPreview={isPreview}
+            isEmpty={isEmpty}
             activeSeverities={filters.severities}
             onSeverityToggle={toggleSeverityFilter}
             onOpenView={setActiveView}
@@ -277,7 +276,7 @@ function DashboardApp() {
           scans={activeScans}
           onRemoveScan={removeScan}
           onClearScans={clearScans}
-          isPreview={isPreview}
+          isEmpty={isEmpty}
         />
       );
     }
@@ -287,7 +286,7 @@ function DashboardApp() {
 
   return (
     <div className="min-h-screen bg-background app-grid">
-      <header className="border-b bg-background/92 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <header className="border-b bg-background/94 backdrop-blur supports-[backdrop-filter]:bg-background/85">
         <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex min-w-0 items-start gap-3">
@@ -297,7 +296,8 @@ function DashboardApp() {
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-2xl font-semibold tracking-normal">Nmap Insight Dashboard</h1>
-                  <Badge variant={isPreview ? "secondary" : "default"}>{isPreview ? "Preview" : "Live local"}</Badge>
+                  <Badge variant={isEmpty ? "outline" : "default"}>{isEmpty ? "No scan loaded" : "Live local"}</Badge>
+                  <span className="rounded-md border bg-muted/30 px-2 py-1 font-mono text-xs text-primary">local://parser</span>
                 </div>
                 <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
                   Upload normal text .nmap files, triage NSE findings, and keep scan evidence local to this browser.
@@ -307,7 +307,7 @@ function DashboardApp() {
             <div className="flex flex-wrap items-center gap-2">
               <div className="hidden items-center gap-2 rounded-lg border bg-muted/20 px-3 py-2 text-xs text-muted-foreground sm:flex">
                 <Database className="h-4 w-4 text-primary" />
-                {scans.length ? `${scans.length} stored scans` : "Preview dataset"}
+                {`${scans.length} stored scans`}
               </div>
               <Button variant="destructive" className="gap-2" disabled={!scans.length} onClick={resetOldData}>
                 <RotateCcw className="h-4 w-4" />

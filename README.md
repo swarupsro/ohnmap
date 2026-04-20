@@ -83,7 +83,7 @@ Severity is inferred when CVSS is unavailable:
 - CSV export for hosts, vulnerabilities, and CVEs
 - JSON export for parsed data
 - Print-friendly summary
-- Preview mock data when no local scan has been uploaded
+- Empty initial dashboard state with all counters at 0
 
 ## Project Structure
 
@@ -105,7 +105,6 @@ components/
 lib/
   analytics.js         filtering, aggregation, scan diffing
   exports.js           CSV and JSON export helpers
-  mockData.js          realistic preview data
   storage.js           localStorage helpers
 parser/
   nmapTextParser.js

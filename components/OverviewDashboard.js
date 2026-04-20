@@ -5,12 +5,14 @@ import {
   AlertTriangle,
   ArrowRight,
   Bug,
+  Cpu,
   FileText,
   Network,
   Radar,
   Server,
   ShieldAlert,
   ShieldCheck,
+  Terminal,
   WifiOff
 } from "lucide-react";
 import {
@@ -26,7 +28,6 @@ import {
   YAxis
 } from "recharts";
 
-import EmptyState from "@/components/EmptyState";
 import SeverityBadge from "@/components/SeverityBadge";
 import StatsCard from "@/components/StatsCard";
 import { Button } from "@/components/ui/button";
@@ -42,7 +43,7 @@ const severityColors = {
   Info: "#6b7280"
 };
 
-const chartColors = ["#0f9f8f", "#e11d48", "#eab308", "#7c3aed", "#f97316", "#0891b2", "#64748b", "#84cc16"];
+const chartColors = ["#0f9f8f", "#e11d48", "#eab308", "#f97316", "#0891b2", "#64748b", "#84cc16"];
 
 function ChartFrame({ title, description, children }) {
   return (
@@ -80,13 +81,13 @@ function SeverityFilterCard({ severity, count, active, onClick }) {
       type="button"
       onClick={onClick}
       className={cn(
-        "group rounded-lg border bg-card p-4 text-left transition-colors focus-ring hover:border-primary/60 hover:bg-muted/35",
+        "terminal-surface group rounded-lg border bg-card p-4 text-left transition-colors focus-ring hover:border-primary/60 hover:bg-muted/35",
         active && "border-primary bg-primary/10"
       )}
     >
       <div className="flex items-center justify-between gap-3">
         <SeverityBadge severity={severity} />
-        <span className="text-3xl font-semibold">{count}</span>
+        <span className="font-mono text-3xl font-semibold">{count}</span>
       </div>
       <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
         <span>{active ? "Filter active" : "Click to filter"}</span>
@@ -96,37 +97,36 @@ function SeverityFilterCard({ severity, count, active, onClick }) {
   );
 }
 
-export default function OverviewDashboard({ dataset, isPreview, activeSeverities = [], onSeverityToggle, onOpenView }) {
+export default function OverviewDashboard({ dataset, isEmpty, activeSeverities = [], onSeverityToggle, onOpenView }) {
   const { stats } = dataset;
-
-  if (!dataset.hosts.length) {
-    return <EmptyState title="No parsed hosts" message="Upload normal text .nmap output to populate the dashboard." />;
-  }
 
   return (
     <div className="space-y-6">
-      {isPreview ? (
-        <Card className="border-primary/30 bg-primary/10">
+      {isEmpty ? (
+        <Card className="terminal-surface border-primary/30">
           <CardContent className="flex flex-col gap-2 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
-            <span>Preview data is loaded until a local .nmap file is uploaded.</span>
-            <span className="text-muted-foreground">Client-side only. Nothing is sent to a server.</span>
+            <span className="inline-flex items-center gap-2 font-medium">
+              <Terminal className="h-4 w-4 text-primary" />
+              Awaiting .nmap input
+            </span>
+            <span className="text-muted-foreground">All counters start at 0. Scan data stays local.</span>
           </CardContent>
         </Card>
       ) : null}
 
-      <Card className="overflow-hidden">
+      <Card className="terminal-surface overflow-hidden">
         <CardContent className="grid gap-5 p-5 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="flex min-h-48 flex-col justify-between rounded-lg border bg-muted/20 p-5">
+          <div className="scanline flex min-h-48 flex-col justify-between rounded-lg border bg-background/70 p-5">
             <div>
               <div className="inline-flex items-center gap-2 rounded-lg border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
                 <Radar className="h-3.5 w-3.5 text-primary" />
-                Current scan posture
+                Operator console
               </div>
               <h2 className="mt-5 max-w-2xl text-3xl font-semibold leading-tight">
-                {stats.totalVulnerabilities ? `${stats.totalVulnerabilities} findings need triage` : "No extracted vulnerabilities in scope"}
+                {stats.totalVulnerabilities ? `${stats.totalVulnerabilities} findings need triage` : "Scope is clean until scan data lands"}
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-                Use the cards below as filters, then drill into hosts, services, CVEs, and raw NSE evidence.
+                Prioritize exposed services, inspect raw NSE evidence, and reset the workspace before a fresh engagement.
               </p>
             </div>
             <div className="mt-6 flex flex-wrap gap-2">
@@ -142,7 +142,7 @@ export default function OverviewDashboard({ dataset, isPreview, activeSeverities
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-            <div className="rounded-lg border p-4">
+            <div className="rounded-lg border bg-background/70 p-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">Reachable hosts</p>
                 <Activity className="h-4 w-4 text-primary" />
@@ -150,13 +150,21 @@ export default function OverviewDashboard({ dataset, isPreview, activeSeverities
               <p className="mt-3 text-3xl font-semibold">{stats.hostsUp}</p>
               <p className="mt-1 text-xs text-muted-foreground">{stats.hostsDown} down or unavailable</p>
             </div>
-            <div className="rounded-lg border p-4">
+            <div className="rounded-lg border bg-background/70 p-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">Exposure surface</p>
                 <Network className="h-4 w-4 text-primary" />
               </div>
               <p className="mt-3 text-3xl font-semibold">{stats.totalOpenPorts}</p>
               <p className="mt-1 text-xs text-muted-foreground">{stats.topServices[0]?.name || "No service"} is most common</p>
+            </div>
+            <div className="rounded-lg border bg-background/70 p-4 sm:col-span-2 lg:col-span-1">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">Parser status</p>
+                <Cpu className="h-4 w-4 text-primary" />
+              </div>
+              <p className="mt-3 font-mono text-sm text-primary">{isEmpty ? "idle: waiting_for_upload" : "ready: evidence_indexed"}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{stats.totalCves} CVEs indexed</p>
             </div>
           </div>
         </CardContent>

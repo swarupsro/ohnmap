@@ -21,7 +21,7 @@ export default function FileUploadCard({ onFiles, recentFiles = [], parsing = fa
   };
 
   return (
-    <Card className="overflow-hidden border-primary/20">
+    <Card className="terminal-surface overflow-hidden border-primary/20">
       <CardHeader className="border-b bg-muted/20 pb-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
@@ -49,7 +49,7 @@ export default function FileUploadCard({ onFiles, recentFiles = [], parsing = fa
           onDrop={handleDrop}
           whileHover={{ scale: 1.003 }}
           className={cn(
-            "relative flex min-h-52 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border border-dashed p-6 text-center transition-colors",
+            "scanline relative flex min-h-52 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border border-dashed p-6 text-center transition-colors",
             dragging ? "border-primary bg-primary/10" : "border-border bg-background hover:bg-muted/35"
           )}
           onClick={() => inputRef.current?.click()}

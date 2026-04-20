@@ -64,9 +64,30 @@
 @layer components {
   .app-grid {
     background-image:
-      linear-gradient(to right, hsl(var(--border) / 0.36) 1px, transparent 1px),
-      linear-gradient(to bottom, hsl(var(--border) / 0.28) 1px, transparent 1px);
+      linear-gradient(to right, hsl(var(--border) / 0.3) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.22) 1px, transparent 1px);
     background-size: 44px 44px;
+  }
+
+  .terminal-surface {
+    background:
+      linear-gradient(180deg, hsl(var(--card) / 0.98), hsl(var(--card) / 0.94)),
+      repeating-linear-gradient(0deg, hsl(var(--primary) / 0.08) 0, hsl(var(--primary) / 0.08) 1px, transparent 1px, transparent 9px);
+  }
+
+  .scanline {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scanline::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent, hsl(var(--primary) / 0.08), transparent);
+    transform: translateY(-100%);
+    animation: scanline 5.5s linear infinite;
   }
 
   .focus-ring {
@@ -76,6 +97,16 @@
   .table-scroll {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted-foreground) / 0.55) transparent;
+  }
+}
+
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+
+  100% {
+    transform: translateY(100%);
   }
 }
 

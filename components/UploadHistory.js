@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatBytes, formatDateTime } from "@/lib/utils";
 import { scanDiff } from "@/lib/analytics";
 
-export default function UploadHistory({ scans, onRemoveScan, onClearScans, isPreview }) {
+export default function UploadHistory({ scans, onRemoveScan, onClearScans, isEmpty }) {
   const [baseId, setBaseId] = useState(scans[0]?.id || "");
   const [compareId, setCompareId] = useState(scans[1]?.id || scans[0]?.id || "");
 
@@ -32,7 +32,7 @@ export default function UploadHistory({ scans, onRemoveScan, onClearScans, isPre
             <CardTitle>Upload History</CardTitle>
             <CardDescription>Local browser storage only.</CardDescription>
           </div>
-          <Button variant="destructive" size="sm" disabled={isPreview || !scans.length} onClick={onClearScans}>
+          <Button variant="destructive" size="sm" disabled={isEmpty || !scans.length} onClick={onClearScans}>
             Clear stored scans
           </Button>
         </CardHeader>
@@ -42,7 +42,7 @@ export default function UploadHistory({ scans, onRemoveScan, onClearScans, isPre
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="truncate font-semibold">{scan.fileName}</p>
-                  {isPreview ? <Badge variant="secondary">Preview</Badge> : null}
+                  {isEmpty ? <Badge variant="outline">Empty</Badge> : null}
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {formatBytes(scan.fileSize)} · uploaded {formatDateTime(scan.uploadedAt)} · {scan.summary?.hosts || 0} hosts ·{" "}
@@ -50,7 +50,7 @@ export default function UploadHistory({ scans, onRemoveScan, onClearScans, isPre
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">{scan.command || "Command metadata unavailable"}</p>
               </div>
-              <Button variant="outline" size="sm" disabled={isPreview} onClick={() => onRemoveScan(scan.id)} className="gap-2">
+              <Button variant="outline" size="sm" disabled={isEmpty} onClick={() => onRemoveScan(scan.id)} className="gap-2">
                 <Trash2 className="h-4 w-4" />
                 Remove
               </Button>
