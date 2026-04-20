@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 222 15% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 15% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 15% 11%;
+    --primary: 173 82% 27%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 347 88% 96%;
+    --secondary-foreground: 347 74% 34%;
+    --muted: 220 14% 92%;
+    --muted-foreground: 222 9% 39%;
+    --accent: 43 94% 89%;
+    --accent-foreground: 33 92% 24%;
+    --destructive: 349 84% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 86%;
+    --input: 220 13% 86%;
+    --ring: 173 82% 27%;
+    --radius: 8px;
+  }
+
+  .dark {
+    --background: 225 12% 7%;
+    --foreground: 210 18% 94%;
+    --card: 225 10% 11%;
+    --card-foreground: 210 18% 94%;
+    --popover: 225 10% 11%;
+    --popover-foreground: 210 18% 94%;
+    --primary: 173 70% 39%;
+    --primary-foreground: 220 20% 8%;
+    --secondary: 347 42% 18%;
+    --secondary-foreground: 347 82% 88%;
+    --muted: 225 9% 16%;
+    --muted-foreground: 220 10% 70%;
+    --accent: 43 70% 18%;
+    --accent-foreground: 43 90% 86%;
+    --destructive: 349 76% 52%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 225 9% 22%;
+    --input: 225 9% 22%;
+    --ring: 173 70% 39%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+@layer components {
+  .app-grid {
+    background-image:
+      linear-gradient(to right, hsl(var(--border) / 0.36) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.28) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  .table-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.55) transparent;
+  }
+}
+
+@media print {
+  aside,
+  header,
+  [data-radix-popper-content-wrapper],
+  .sticky {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+}
