@@ -81,6 +81,7 @@ Severity is inferred when CVSS is unavailable:
 - Upload history
 - Scan comparison for new/removed ports and new/fixed findings
 - CSV export for hosts, vulnerabilities, and CVEs
+- CSV export for filtered analytics reports
 - JSON export for parsed data
 - Print-friendly summary
 - Empty initial dashboard state with all counters at 0

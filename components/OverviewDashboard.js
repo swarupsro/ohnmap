@@ -6,6 +6,7 @@ import {
   ArrowRight,
   Bug,
   Cpu,
+  Download,
   FileText,
   Network,
   Radar,
@@ -32,6 +33,7 @@ import SeverityBadge from "@/components/SeverityBadge";
 import StatsCard from "@/components/StatsCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { exportCsv } from "@/lib/exports";
 import { cn } from "@/lib/utils";
 import { SEVERITIES } from "@/utils/severityMapper";
 
@@ -45,11 +47,58 @@ const severityColors = {
 
 const chartColors = ["#0f9f8f", "#e11d48", "#eab308", "#f97316", "#0891b2", "#64748b", "#84cc16"];
 
-function ChartFrame({ title, description, children }) {
+const analyticsCsvColumns = [
+  { label: "Section", key: "section" },
+  { label: "Metric", key: "metric" },
+  { label: "Value", key: "value" },
+  { label: "Context", key: "context" }
+];
+
+function buildAnalyticsReportRows(stats) {
+  const summary = [
+    ["Summary", "Uploaded scans", stats.totalScans, "Current filtered scope"],
+    ["Summary", "Total hosts", stats.totalHosts, `${stats.hostsUp} up; ${stats.hostsDown} down`],
+    ["Summary", "Open ports", stats.totalOpenPorts, "Open services found"],
+    ["Summary", "Vulnerabilities", stats.totalVulnerabilities, `${stats.totalCves} unique CVEs`]
+  ];
+
+  const severity = SEVERITIES.map((item) => ["Severity", item, stats.severityCounts[item] || 0, "Finding count"]);
+  const services = (stats.topServices || []).map((item, index) => ["Top services", `${index + 1}. ${item.name}`, item.value, "Open port count"]);
+  const ports = (stats.topPorts || []).map((item, index) => ["Top ports", `${index + 1}. ${item.name}`, item.value, "Open port count"]);
+  const hosts = (stats.riskyHosts || []).map((item, index) => [
+    "Risky hosts",
+    `${index + 1}. ${item.host}`,
+    item.riskScore.toFixed(1),
+    `${item.vulnerabilities} findings; ${item.openPorts} open ports; ${item.highestSeverity}`
+  ]);
+  const cves = (stats.topCves || []).map((item, index) => ["Top CVEs", `${index + 1}. ${item.name}`, item.value, "Occurrence count"]);
+  const scripts = (stats.topScripts || []).map((item, index) => ["Top scripts", `${index + 1}. ${item.name}`, item.value, "Finding count"]);
+
+  return [...summary, ...severity, ...services, ...ports, ...hosts, ...cves, ...scripts].map(([section, metric, value, context]) => ({
+    section,
+    metric,
+    value,
+    context
+  }));
+}
+
+function ChartFrame({ title, description, children, accent = "primary" }) {
+  const accents = {
+    primary: "bg-primary",
+    rose: "bg-rose-500",
+    amber: "bg-yellow-500",
+    cyan: "bg-cyan-500",
+    gray: "bg-gray-500"
+  };
+
   return (
-    <Card className="min-h-80">
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
+    <Card className="terminal-surface min-h-80 overflow-hidden">
+      <div className={cn("h-1", accents[accent] || accents.primary)} />
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2">
+          <span className={cn("h-2 w-2 rounded-full", accents[accent] || accents.primary)} />
+          {title}
+        </CardTitle>
         {description ? <CardDescription>{description}</CardDescription> : null}
       </CardHeader>
       <CardContent className="h-64">{children}</CardContent>
@@ -59,8 +108,9 @@ function ChartFrame({ title, description, children }) {
 
 function EmptyChart() {
   return (
-    <div className="flex h-full items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
-      No chart data
+    <div className="flex h-full flex-col items-center justify-center rounded-lg border border-dashed bg-background/50 text-center text-sm text-muted-foreground">
+      <Activity className="mb-2 h-5 w-5 text-primary" />
+      No analytics data yet
     </div>
   );
 }
@@ -72,6 +122,32 @@ function SimpleTooltip({ active, payload, label }) {
       <p className="font-medium">{label || payload[0].name}</p>
       <p className="text-muted-foreground">{payload[0].value}</p>
     </div>
+  );
+}
+
+function IntelList({ title, description, items, empty = "No data" }) {
+  return (
+    <Card className="terminal-surface">
+      <CardHeader className="pb-3">
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {items.length ? (
+          items.slice(0, 6).map((item, index) => (
+            <div key={`${item.name}-${index}`} className="flex items-center justify-between gap-3 rounded-lg border bg-background/60 px-3 py-2">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{item.name}</p>
+                {item.detail ? <p className="text-xs text-muted-foreground">{item.detail}</p> : null}
+              </div>
+              <span className="rounded-md bg-muted px-2 py-1 font-mono text-xs">{item.value}</span>
+            </div>
+          ))
+        ) : (
+          <div className="rounded-lg border border-dashed bg-background/50 p-6 text-center text-sm text-muted-foreground">{empty}</div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -99,6 +175,20 @@ function SeverityFilterCard({ severity, count, active, onClick }) {
 
 export default function OverviewDashboard({ dataset, isEmpty, activeSeverities = [], onSeverityToggle, onOpenView }) {
   const { stats } = dataset;
+  const analyticsRows = buildAnalyticsReportRows(stats);
+  const exportAnalyticsReport = () => {
+    const stamp = new Date().toISOString().slice(0, 10);
+    exportCsv(`nmap-analytics-report-${stamp}.csv`, analyticsRows, analyticsCsvColumns);
+  };
+  const topCves = (stats.topCves || []).map((item) => ({ ...item, detail: "CVE occurrence" }));
+  const topScripts = (stats.topScripts || []).map((item) => ({ ...item, detail: "NSE finding source" }));
+  const topPorts = (stats.topPorts || []).map((item) => ({ ...item, detail: "Open port frequency" }));
+  const hostImpact = (stats.riskyHosts || []).map((host) => ({
+    name: host.host,
+    openPorts: host.openPorts,
+    vulnerabilities: host.vulnerabilities,
+    riskScore: Number(host.riskScore.toFixed(1))
+  }));
 
   return (
     <div className="space-y-6">
@@ -215,119 +305,148 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
         ))}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <ChartFrame title="Severity Distribution" description="Findings grouped by inferred risk level.">
-          {stats.severityDistribution.some((item) => item.value > 0) ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.severityDistribution}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" tickLine={false} axisLine={false} />
-                <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
-                <Tooltip content={<SimpleTooltip />} />
-                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                  {stats.severityDistribution.map((entry) => (
-                    <Cell key={entry.name} fill={severityColors[entry.name]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyChart />
-          )}
-        </ChartFrame>
-
-        <ChartFrame title="Host Status" description="Reachability observed during the scan.">
-          {stats.hostStatus.length ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={stats.hostStatus} dataKey="value" nameKey="name" innerRadius={52} outerRadius={88} paddingAngle={3}>
-                  {stats.hostStatus.map((entry, index) => (
-                    <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />
-                  ))}
-                </Pie>
-                <Tooltip content={<SimpleTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyChart />
-          )}
-        </ChartFrame>
-
-        <ChartFrame title="Open Ports By Service" description="Most exposed service names.">
-          {stats.topServices.length ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.topServices} layout="vertical" margin={{ left: 24 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
-                <YAxis type="category" dataKey="name" width={90} tickLine={false} axisLine={false} />
-                <Tooltip content={<SimpleTooltip />} />
-                <Bar dataKey="value" fill="#0f9f8f" radius={[0, 6, 6, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyChart />
-          )}
-        </ChartFrame>
-
-        <ChartFrame title="Vulnerabilities By Host" description="Hosts with the most findings.">
-          {stats.vulnerabilitiesByHost.length ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.vulnerabilitiesByHost} layout="vertical" margin={{ left: 24 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
-                <YAxis type="category" dataKey="name" width={100} tickLine={false} axisLine={false} />
-                <Tooltip content={<SimpleTooltip />} />
-                <Bar dataKey="value" fill="#e11d48" radius={[0, 6, 6, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyChart />
-          )}
-        </ChartFrame>
-
-        <ChartFrame title="Open Ports By Host" description="Hosts with the widest exposed surface.">
-          {stats.openPortsByHost.length ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.openPortsByHost} layout="vertical" margin={{ left: 24 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
-                <YAxis type="category" dataKey="name" width={100} tickLine={false} axisLine={false} />
-                <Tooltip content={<SimpleTooltip />} />
-                <Bar dataKey="value" fill="#eab308" radius={[0, 6, 6, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyChart />
-          )}
-        </ChartFrame>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Most Risky Hosts</CardTitle>
-            <CardDescription>Risk score combines severity and open port exposure.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {stats.riskyHosts.length ? (
-              stats.riskyHosts.map((host) => (
-                <div key={host.host} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{host.host}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {host.vulnerabilities} findings · {host.openPorts} open ports
-                    </p>
-                  </div>
-                  <SeverityBadge severity={host.highestSeverity} />
-                </div>
-              ))
-            ) : (
-              <div className="flex h-40 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
-                <ShieldCheck className="mr-2 h-4 w-4" />
-                No risky hosts in scope
+      <section className="space-y-4">
+        <Card className="terminal-surface overflow-hidden border-primary/20">
+          <CardHeader className="border-b bg-background/40">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <CardTitle>Graph & Analytics</CardTitle>
+                <CardDescription>Filtered operational signals for exposure, impact, and evidence priority.</CardDescription>
               </div>
-            )}
+              <Button variant="outline" className="gap-2" onClick={exportAnalyticsReport}>
+                <Download className="h-4 w-4" />
+                Export analytics CSV
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-lg border bg-background/60 p-4">
+              <p className="text-xs uppercase text-muted-foreground">Risk pressure</p>
+              <p className="mt-2 font-mono text-2xl font-semibold">{(stats.severityCounts.Critical || 0) + (stats.severityCounts.High || 0)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Critical + high findings</p>
+            </div>
+            <div className="rounded-lg border bg-background/60 p-4">
+              <p className="text-xs uppercase text-muted-foreground">Most exposed service</p>
+              <p className="mt-2 truncate font-mono text-2xl font-semibold">{stats.topServices[0]?.name || "none"}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{stats.topServices[0]?.value || 0} open ports</p>
+            </div>
+            <div className="rounded-lg border bg-background/60 p-4">
+              <p className="text-xs uppercase text-muted-foreground">Top host impact</p>
+              <p className="mt-2 truncate font-mono text-2xl font-semibold">{stats.riskyHosts[0]?.host || "none"}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{stats.riskyHosts[0]?.vulnerabilities || 0} findings</p>
+            </div>
+            <div className="rounded-lg border bg-background/60 p-4">
+              <p className="text-xs uppercase text-muted-foreground">CSV report rows</p>
+              <p className="mt-2 font-mono text-2xl font-semibold">{analyticsRows.length}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Summary and top signals</p>
+            </div>
           </CardContent>
         </Card>
-      </div>
+
+        <div className="grid gap-4 xl:grid-cols-2">
+          <ChartFrame title="Severity Signal" description="Findings grouped by inferred risk level." accent="rose">
+            {stats.severityDistribution.some((item) => item.value > 0) ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.severityDistribution} layout="vertical" margin={{ left: 16, right: 18 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
+                  <YAxis type="category" dataKey="name" width={74} tickLine={false} axisLine={false} />
+                  <Tooltip content={<SimpleTooltip />} />
+                  <Bar dataKey="value" radius={[0, 6, 6, 0]}>
+                    {stats.severityDistribution.map((entry) => (
+                      <Cell key={entry.name} fill={severityColors[entry.name]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyChart />
+            )}
+          </ChartFrame>
+
+          <ChartFrame title="Service Exposure" description="Services with the widest open-port footprint." accent="primary">
+            {stats.topServices.length ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.topServices} layout="vertical" margin={{ left: 20, right: 18 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
+                  <YAxis type="category" dataKey="name" width={96} tickLine={false} axisLine={false} />
+                  <Tooltip content={<SimpleTooltip />} />
+                  <Bar dataKey="value" fill="#0f9f8f" radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyChart />
+            )}
+          </ChartFrame>
+
+          <ChartFrame title="Host Impact Matrix" description="Findings and open ports per highest-risk host." accent="amber">
+            {hostImpact.length ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={hostImpact} layout="vertical" margin={{ left: 24, right: 18 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
+                  <YAxis type="category" dataKey="name" width={104} tickLine={false} axisLine={false} />
+                  <Tooltip content={<SimpleTooltip />} />
+                  <Bar dataKey="vulnerabilities" name="Findings" fill="#e11d48" radius={[0, 6, 6, 0]} />
+                  <Bar dataKey="openPorts" name="Open ports" fill="#eab308" radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyChart />
+            )}
+          </ChartFrame>
+
+          <ChartFrame title="Reachability Split" description="Host up/down distribution in the current scope." accent="cyan">
+            {stats.hostStatus.length ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={stats.hostStatus} dataKey="value" nameKey="name" innerRadius={58} outerRadius={92} paddingAngle={3}>
+                    {stats.hostStatus.map((entry, index) => (
+                      <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<SimpleTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyChart />
+            )}
+          </ChartFrame>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-4">
+          <IntelList title="Top CVEs" description="Most repeated identifiers." items={topCves} empty="No CVEs extracted" />
+          <IntelList title="NSE Scripts" description="Most common finding sources." items={topScripts} empty="No vulnerable scripts" />
+          <IntelList title="Top Ports" description="Most frequent exposed ports." items={topPorts} empty="No open ports" />
+          <Card className="terminal-surface">
+            <CardHeader className="pb-3">
+              <CardTitle>Risk Queue</CardTitle>
+              <CardDescription>Hosts ranked by findings and exposure.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {stats.riskyHosts.length ? (
+                stats.riskyHosts.map((host) => (
+                  <div key={host.host} className="rounded-lg border bg-background/60 px-3 py-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="min-w-0 truncate text-sm font-medium">{host.host}</p>
+                      <SeverityBadge severity={host.highestSeverity} />
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {host.vulnerabilities} findings · {host.openPorts} open ports · risk {host.riskScore.toFixed(1)}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="flex h-40 items-center justify-center rounded-lg border border-dashed bg-background/50 text-sm text-muted-foreground">
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  No risky hosts in scope
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </section>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <StatsCard title="Critical Findings" value={stats.severityCounts.Critical || 0} icon={AlertTriangle} tone="rose" />
