@@ -54,8 +54,23 @@ function MultiSelectFilter({ label, options, value, onChange }) {
   );
 }
 
+function ActiveFilterChip({ label, onRemove }) {
+  return (
+    <button
+      type="button"
+      onClick={onRemove}
+      className="inline-flex max-w-full items-center gap-1 rounded-md border bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground focus-ring"
+      title={`Remove ${label}`}
+    >
+      <span className="truncate">{label}</span>
+      <X className="h-3 w-3 shrink-0" />
+    </button>
+  );
+}
+
 export default function FilterToolbar({ filters, options, onChange, className }) {
   const update = (patch) => onChange({ ...filters, ...patch });
+  const scanLabel = (scanId) => (options.scans || []).find((scan) => scan.value === scanId)?.label || scanId;
   const activeCount = [
     filters.query,
     filters.scanIds.length,
@@ -79,6 +94,50 @@ export default function FilterToolbar({ filters, options, onChange, className })
     filters.cve ||
     filters.os ||
     filters.vulnerabilityMode !== "all";
+  const activeChips = [
+    filters.query
+      ? {
+          key: "query",
+          label: `Search: ${filters.query}`,
+          onRemove: () => update({ query: "" })
+        }
+      : null,
+    ...filters.scanIds.map((scanId) => ({
+      key: `scan-${scanId}`,
+      label: `Scan: ${scanLabel(scanId)}`,
+      onRemove: () => update({ scanIds: filters.scanIds.filter((item) => item !== scanId) })
+    })),
+    ...filters.severities.map((severity) => ({
+      key: `severity-${severity}`,
+      label: `Severity: ${severity}`,
+      onRemove: () => update({ severities: filters.severities.filter((item) => item !== severity) })
+    })),
+    ...filters.hostStates.map((state) => ({
+      key: `state-${state}`,
+      label: `State: ${state}`,
+      onRemove: () => update({ hostStates: filters.hostStates.filter((item) => item !== state) })
+    })),
+    ...filters.services.map((service) => ({
+      key: `service-${service}`,
+      label: `Service: ${service}`,
+      onRemove: () => update({ services: filters.services.filter((item) => item !== service) })
+    })),
+    ...filters.scripts.map((script) => ({
+      key: `script-${script}`,
+      label: `Script: ${script}`,
+      onRemove: () => update({ scripts: filters.scripts.filter((item) => item !== script) })
+    })),
+    filters.port ? { key: "port", label: `Port: ${filters.port}`, onRemove: () => update({ port: "" }) } : null,
+    filters.cve ? { key: "cve", label: `CVE: ${filters.cve}`, onRemove: () => update({ cve: "" }) } : null,
+    filters.os ? { key: "os", label: `OS: ${filters.os}`, onRemove: () => update({ os: "" }) } : null,
+    filters.vulnerabilityMode !== "all"
+      ? {
+          key: "vulnerabilityMode",
+          label: filters.vulnerabilityMode === "vulnerable" ? "Vulnerable only" : "Non-vulnerable only",
+          onRemove: () => update({ vulnerabilityMode: "all" })
+        }
+      : null
+  ].filter(Boolean);
 
   return (
     <div className={cn("sticky top-0 z-30 border-b bg-background/94 backdrop-blur supports-[backdrop-filter]:bg-background/85", className)}>
@@ -168,6 +227,14 @@ export default function FilterToolbar({ filters, options, onChange, className })
             </Button>
           </div>
         </div>
+        {activeChips.length ? (
+          <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+            <span className="text-xs font-medium uppercase text-muted-foreground">Active filters</span>
+            {activeChips.map((chip) => (
+              <ActiveFilterChip key={chip.key} label={chip.label} onRemove={chip.onRemove} />
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   );
