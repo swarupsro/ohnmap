@@ -57,7 +57,9 @@ const analyticsCsvColumns = [
 function buildAnalyticsReportRows(stats) {
   const summary = [
     ["Summary", "Uploaded scans", stats.totalScans, "Current filtered scope"],
-    ["Summary", "Total hosts", stats.totalHosts, `${stats.hostsUp} up; ${stats.hostsDown} down`],
+    ["Summary", "Total hosts", stats.totalHosts, `${stats.hostsUp} reachable; ${stats.hostsDown} unreachable`],
+    ["Summary", "Reachable hosts", stats.hostsUp, "Hosts reported up"],
+    ["Summary", "Unreachable hosts", stats.hostsDown, "Hosts reported down"],
     ["Summary", "Open ports", stats.totalOpenPorts, "Open services found"],
     ["Summary", "Vulnerabilities", stats.totalVulnerabilities, `${stats.totalCves} unique CVEs`]
   ];
@@ -231,14 +233,22 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-lg border bg-background/70 p-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">Reachable hosts</p>
                 <Activity className="h-4 w-4 text-primary" />
               </div>
               <p className="mt-3 text-3xl font-semibold">{stats.hostsUp}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{stats.hostsDown} down or unavailable</p>
+              <p className="mt-1 text-xs text-muted-foreground">{stats.hostsDown} unreachable in scope</p>
+            </div>
+            <div className="rounded-lg border bg-background/70 p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">Unreachable hosts</p>
+                <WifiOff className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <p className="mt-3 text-3xl font-semibold">{stats.hostsDown}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Hosts reported down</p>
             </div>
             <div className="rounded-lg border bg-background/70 p-4">
               <div className="flex items-center justify-between">
@@ -248,7 +258,7 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
               <p className="mt-3 text-3xl font-semibold">{stats.totalOpenPorts}</p>
               <p className="mt-1 text-xs text-muted-foreground">{stats.topServices[0]?.name || "No service"} is most common</p>
             </div>
-            <div className="rounded-lg border bg-background/70 p-4 sm:col-span-2 lg:col-span-1">
+            <div className="rounded-lg border bg-background/70 p-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">Parser status</p>
                 <Cpu className="h-4 w-4 text-primary" />
@@ -272,7 +282,7 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
           title="Total Hosts"
           value={stats.totalHosts}
           icon={Server}
-          detail={`${stats.hostsUp} up · ${stats.hostsDown} down`}
+          detail={`${stats.hostsUp} reachable · ${stats.hostsDown} unreachable`}
           onClick={() => onOpenView?.("hosts")}
         />
         <StatsCard
@@ -397,7 +407,7 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
             )}
           </ChartFrame>
 
-          <ChartFrame title="Reachability Split" description="Host up/down distribution in the current scope." accent="cyan">
+          <ChartFrame title="Reachability Split" description="Reachable and unreachable hosts in the current scope." accent="cyan">
             {stats.hostStatus.length ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -450,7 +460,7 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
 
       <div className="grid gap-4 lg:grid-cols-3">
         <StatsCard title="Critical Findings" value={stats.severityCounts.Critical || 0} icon={AlertTriangle} tone="rose" />
-        <StatsCard title="Down Hosts" value={stats.hostsDown} icon={WifiOff} tone="gray" />
+        <StatsCard title="Unreachable Hosts" value={stats.hostsDown} icon={WifiOff} tone="gray" />
         <StatsCard title="Common CVEs" value={stats.topCves.length} icon={Bug} tone="amber" />
       </div>
     </div>

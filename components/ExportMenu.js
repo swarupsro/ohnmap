@@ -11,10 +11,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { cveCsvColumns, exportCsv, exportJson, hostCsvColumns, vulnerabilityCsvColumns } from "@/lib/exports";
+import { cveCsvColumns, exportCsv, exportJson, hostCsvColumns, unreachableHostCsvColumns, vulnerabilityCsvColumns } from "@/lib/exports";
 
 export default function ExportMenu({ dataset, filteredDataset }) {
   const active = filteredDataset || dataset;
+  const unreachableHosts = active.hosts.filter((host) => host.status === "down");
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -27,6 +29,12 @@ export default function ExportMenu({ dataset, filteredDataset }) {
         <DropdownMenuLabel>Filtered results</DropdownMenuLabel>
         <DropdownMenuItem onClick={() => exportCsv("nmap-hosts-filtered.csv", active.hosts, hostCsvColumns)}>
           Hosts as CSV
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={!unreachableHosts.length}
+          onClick={() => exportCsv("nmap-unreachable-host-names-filtered.csv", unreachableHosts, unreachableHostCsvColumns)}
+        >
+          Unreachable host names as CSV
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => exportCsv("nmap-vulnerabilities-filtered.csv", active.vulnerabilities, vulnerabilityCsvColumns)}

@@ -47,6 +47,7 @@ export default function HostsTable({ hosts, onSelectHost }) {
   const [sort, setSort] = useState({ column: "highestSeverity", direction: "desc" });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const unreachableCount = hosts.filter((host) => host.status === "down").length;
 
   const sorted = useMemo(() => sortHosts(hosts, sort), [hosts, sort]);
   const pageRows = sorted.slice((page - 1) * pageSize, page * pageSize);
@@ -64,7 +65,9 @@ export default function HostsTable({ hosts, onSelectHost }) {
     <Card>
       <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle>Hosts</CardTitle>
-        <p className="text-sm text-muted-foreground">{hosts.length} hosts in scope</p>
+        <p className="text-sm text-muted-foreground">
+          {hosts.length} hosts in scope · {unreachableCount} unreachable
+        </p>
       </CardHeader>
       <CardContent className="p-0">
         <Table>
