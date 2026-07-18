@@ -21,8 +21,8 @@ export default function FileUploadCard({ onFiles, recentFiles = [], parsing = fa
   };
 
   return (
-    <Card className="terminal-surface overflow-hidden border-primary/20">
-      <CardHeader className="border-b bg-muted/20 pb-4">
+    <Card className="overflow-hidden">
+      <CardHeader className="border-b border-border/70 pb-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -49,12 +49,11 @@ export default function FileUploadCard({ onFiles, recentFiles = [], parsing = fa
           onDrop={handleDrop}
           whileHover={{ scale: 1.003 }}
           className={cn(
-            "scanline relative flex min-h-52 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border border-dashed p-6 text-center transition-colors",
-            dragging ? "border-primary bg-primary/10" : "border-border bg-background hover:bg-muted/35"
+            "relative flex min-h-52 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border border-dashed p-6 text-center transition-colors",
+            dragging ? "border-primary bg-primary/5" : "border-border bg-muted/20 hover:bg-muted/40"
           )}
           onClick={() => inputRef.current?.click()}
         >
-          <div className="absolute inset-x-0 top-0 h-1 bg-primary" />
           <input
             ref={inputRef}
             type="file"
@@ -102,7 +101,7 @@ export default function FileUploadCard({ onFiles, recentFiles = [], parsing = fa
           </div>
         ) : recentFiles.length ? (
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase text-muted-foreground">Recent uploads</p>
+            <p className="text-xs font-medium text-muted-foreground">Recent uploads</p>
             {recentFiles.slice(0, 3).map((scan) => (
               <div key={scan.id} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm">
                 <div className="min-w-0">

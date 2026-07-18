@@ -44,14 +44,25 @@ export default function ToastProvider({ children }) {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
-                className={cn(
-                  "rounded-lg border bg-popover p-4 text-popover-foreground shadow-lg",
-                  item.variant === "error" && "border-destructive/40",
-                  item.variant === "success" && "border-primary/40"
-                )}
+                className="relative overflow-hidden rounded-xl border border-border/70 bg-popover text-popover-foreground shadow-soft"
               >
-                <div className="flex gap-3">
-                  <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+                <div className="flex gap-3 p-4">
+                  <span
+                    className={cn(
+                      "absolute inset-y-0 left-0 w-1",
+                      item.variant === "error" && "bg-destructive",
+                      item.variant === "success" && "bg-primary",
+                      item.variant === "info" && "bg-sky-500"
+                    )}
+                  />
+                  <Icon
+                    className={cn(
+                      "mt-0.5 h-4 w-4 shrink-0",
+                      item.variant === "error" && "text-destructive",
+                      item.variant === "success" && "text-primary",
+                      item.variant === "info" && "text-sky-500"
+                    )}
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold">{item.title}</p>
                     {item.description ? <p className="mt-1 text-sm text-muted-foreground">{item.description}</p> : null}

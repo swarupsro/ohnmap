@@ -9,11 +9,19 @@ export const SEVERITY_WEIGHTS = {
 };
 
 export const SEVERITY_STYLES = {
-  Critical: "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300",
-  High: "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-300",
-  Medium: "border-yellow-500/30 bg-yellow-500/20 text-yellow-700 dark:text-yellow-300",
-  Low: "border-teal-500/30 bg-teal-500/10 text-teal-700 dark:text-teal-300",
-  Info: "border-gray-500/30 bg-gray-500/10 text-gray-700 dark:text-gray-300"
+  Critical: "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300",
+  High: "border-orange-500/20 bg-orange-500/10 text-orange-700 dark:text-orange-300",
+  Medium: "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  Low: "border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+  Info: "border-slate-500/20 bg-slate-500/10 text-slate-600 dark:text-slate-300"
+};
+
+export const SEVERITY_DOT_COLORS = {
+  Critical: "bg-rose-500",
+  High: "bg-orange-500",
+  Medium: "bg-amber-500",
+  Low: "bg-sky-500",
+  Info: "bg-slate-400"
 };
 
 export function normalizeSeverity(value) {

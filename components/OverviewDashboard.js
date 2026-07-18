@@ -13,7 +13,6 @@ import {
   Server,
   ShieldAlert,
   ShieldCheck,
-  Terminal,
   WifiOff
 } from "lucide-react";
 import {
@@ -40,12 +39,12 @@ import { SEVERITIES } from "@/utils/severityMapper";
 const severityColors = {
   Critical: "#e11d48",
   High: "#f97316",
-  Medium: "#eab308",
-  Low: "#14b8a6",
-  Info: "#6b7280"
+  Medium: "#f59e0b",
+  Low: "#0ea5e9",
+  Info: "#64748b"
 };
 
-const chartColors = ["#0f9f8f", "#e11d48", "#eab308", "#f97316", "#0891b2", "#64748b", "#84cc16"];
+const chartColors = ["#4f46e5", "#e11d48", "#f59e0b", "#f97316", "#0ea5e9", "#64748b", "#22c55e"];
 
 const analyticsCsvColumns = [
   { label: "Section", key: "section" },
@@ -88,14 +87,13 @@ function ChartFrame({ title, description, children, accent = "primary" }) {
   const accents = {
     primary: "bg-primary",
     rose: "bg-rose-500",
-    amber: "bg-yellow-500",
-    cyan: "bg-cyan-500",
-    gray: "bg-gray-500"
+    amber: "bg-amber-500",
+    cyan: "bg-sky-500",
+    gray: "bg-slate-400"
   };
 
   return (
-    <Card className="terminal-surface min-h-80 overflow-hidden">
-      <div className={cn("h-1", accents[accent] || accents.primary)} />
+    <Card className="min-h-80 overflow-hidden">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2">
           <span className={cn("h-2 w-2 rounded-full", accents[accent] || accents.primary)} />
@@ -129,7 +127,7 @@ function SimpleTooltip({ active, payload, label }) {
 
 function IntelList({ title, description, items, empty = "No data" }) {
   return (
-    <Card className="terminal-surface">
+    <Card>
       <CardHeader className="pb-3">
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
@@ -137,16 +135,16 @@ function IntelList({ title, description, items, empty = "No data" }) {
       <CardContent className="space-y-2">
         {items.length ? (
           items.slice(0, 6).map((item, index) => (
-            <div key={`${item.name}-${index}`} className="flex items-center justify-between gap-3 rounded-lg border bg-background/60 px-3 py-2">
+            <div key={`${item.name}-${index}`} className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-muted/20 px-3 py-2">
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{item.name}</p>
                 {item.detail ? <p className="text-xs text-muted-foreground">{item.detail}</p> : null}
               </div>
-              <span className="rounded-md bg-muted px-2 py-1 font-mono text-xs">{item.value}</span>
+              <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium tabular-nums">{item.value}</span>
             </div>
           ))
         ) : (
-          <div className="rounded-lg border border-dashed bg-background/50 p-6 text-center text-sm text-muted-foreground">{empty}</div>
+          <div className="rounded-lg border border-dashed bg-muted/10 p-6 text-center text-sm text-muted-foreground">{empty}</div>
         )}
       </CardContent>
     </Card>
@@ -159,13 +157,13 @@ function SeverityFilterCard({ severity, count, active, onClick }) {
       type="button"
       onClick={onClick}
       className={cn(
-        "terminal-surface group rounded-lg border bg-card p-4 text-left transition-colors focus-ring hover:border-primary/60 hover:bg-muted/35",
+        "group rounded-xl border border-border/70 bg-card p-4 text-left transition-colors focus-ring hover:border-primary/50 hover:bg-muted/30",
         active && "border-primary bg-primary/10"
       )}
     >
       <div className="flex items-center justify-between gap-3">
         <SeverityBadge severity={severity} />
-        <span className="font-mono text-3xl font-semibold">{count}</span>
+        <span className="text-3xl font-semibold tabular-nums">{count}</span>
       </div>
       <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
         <span>{active ? "Filter active" : "Click to filter"}</span>
@@ -195,10 +193,10 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
   return (
     <div className="space-y-6">
       {isEmpty ? (
-        <Card className="terminal-surface border-primary/30">
+        <Card className="border-primary/25 bg-primary/[0.03]">
           <CardContent className="flex flex-col gap-2 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
             <span className="inline-flex items-center gap-2 font-medium">
-              <Terminal className="h-4 w-4 text-primary" />
+              <Radar className="h-4 w-4 text-primary" />
               Awaiting .nmap input
             </span>
             <span className="text-muted-foreground">All counters start at 0. Scan data stays local.</span>
@@ -206,13 +204,13 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
         </Card>
       ) : null}
 
-      <Card className="terminal-surface overflow-hidden">
+      <Card className="overflow-hidden">
         <CardContent className="grid gap-5 p-5 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="scanline flex min-h-48 flex-col justify-between rounded-lg border bg-background/70 p-5">
+          <div className="flex min-h-48 flex-col justify-between rounded-lg border border-border/70 bg-muted/20 p-5">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-lg border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
+              <div className="inline-flex items-center gap-2 rounded-lg border border-border/70 bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
                 <Radar className="h-3.5 w-3.5 text-primary" />
-                Operator console
+                Live overview
               </div>
               <h2 className="mt-5 max-w-2xl text-3xl font-semibold leading-tight">
                 {stats.totalVulnerabilities ? `${stats.totalVulnerabilities} findings need triage` : "Scope is clean until scan data lands"}
@@ -234,36 +232,36 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-lg border bg-background/70 p-4">
+            <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">Reachable hosts</p>
                 <Activity className="h-4 w-4 text-primary" />
               </div>
-              <p className="mt-3 text-3xl font-semibold">{stats.hostsUp}</p>
+              <p className="mt-3 text-3xl font-semibold tabular-nums">{stats.hostsUp}</p>
               <p className="mt-1 text-xs text-muted-foreground">{stats.hostsDown} unreachable in scope</p>
             </div>
-            <div className="rounded-lg border bg-background/70 p-4">
+            <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">Unreachable hosts</p>
                 <WifiOff className="h-4 w-4 text-muted-foreground" />
               </div>
-              <p className="mt-3 text-3xl font-semibold">{stats.hostsDown}</p>
+              <p className="mt-3 text-3xl font-semibold tabular-nums">{stats.hostsDown}</p>
               <p className="mt-1 text-xs text-muted-foreground">Hosts reported down</p>
             </div>
-            <div className="rounded-lg border bg-background/70 p-4">
+            <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">Exposure surface</p>
                 <Network className="h-4 w-4 text-primary" />
               </div>
-              <p className="mt-3 text-3xl font-semibold">{stats.totalOpenPorts}</p>
+              <p className="mt-3 text-3xl font-semibold tabular-nums">{stats.totalOpenPorts}</p>
               <p className="mt-1 text-xs text-muted-foreground">{stats.topServices[0]?.name || "No service"} is most common</p>
             </div>
-            <div className="rounded-lg border bg-background/70 p-4">
+            <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">Parser status</p>
                 <Cpu className="h-4 w-4 text-primary" />
               </div>
-              <p className="mt-3 font-mono text-sm text-primary">{isEmpty ? "idle: waiting_for_upload" : "ready: evidence_indexed"}</p>
+              <p className="mt-3 text-sm font-semibold text-primary">{isEmpty ? "Idle — waiting for upload" : "Ready — evidence indexed"}</p>
               <p className="mt-1 text-xs text-muted-foreground">{stats.totalCves} CVEs indexed</p>
             </div>
           </div>
@@ -316,8 +314,8 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
       </div>
 
       <section className="space-y-4">
-        <Card className="terminal-surface overflow-hidden border-primary/20">
-          <CardHeader className="border-b bg-background/40">
+        <Card className="overflow-hidden">
+          <CardHeader className="border-b border-border/70">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <CardTitle>Graph & Analytics</CardTitle>
@@ -330,24 +328,24 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
             </div>
           </CardHeader>
           <CardContent className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-lg border bg-background/60 p-4">
-              <p className="text-xs uppercase text-muted-foreground">Risk pressure</p>
-              <p className="mt-2 font-mono text-2xl font-semibold">{(stats.severityCounts.Critical || 0) + (stats.severityCounts.High || 0)}</p>
+            <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
+              <p className="text-xs font-medium text-muted-foreground">Risk pressure</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums">{(stats.severityCounts.Critical || 0) + (stats.severityCounts.High || 0)}</p>
               <p className="mt-1 text-xs text-muted-foreground">Critical + high findings</p>
             </div>
-            <div className="rounded-lg border bg-background/60 p-4">
-              <p className="text-xs uppercase text-muted-foreground">Most exposed service</p>
-              <p className="mt-2 truncate font-mono text-2xl font-semibold">{stats.topServices[0]?.name || "none"}</p>
+            <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
+              <p className="text-xs font-medium text-muted-foreground">Most exposed service</p>
+              <p className="mt-2 truncate text-2xl font-semibold">{stats.topServices[0]?.name || "none"}</p>
               <p className="mt-1 text-xs text-muted-foreground">{stats.topServices[0]?.value || 0} open ports</p>
             </div>
-            <div className="rounded-lg border bg-background/60 p-4">
-              <p className="text-xs uppercase text-muted-foreground">Top host impact</p>
-              <p className="mt-2 truncate font-mono text-2xl font-semibold">{stats.riskyHosts[0]?.host || "none"}</p>
+            <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
+              <p className="text-xs font-medium text-muted-foreground">Top host impact</p>
+              <p className="mt-2 truncate text-2xl font-semibold">{stats.riskyHosts[0]?.host || "none"}</p>
               <p className="mt-1 text-xs text-muted-foreground">{stats.riskyHosts[0]?.vulnerabilities || 0} findings</p>
             </div>
-            <div className="rounded-lg border bg-background/60 p-4">
-              <p className="text-xs uppercase text-muted-foreground">CSV report rows</p>
-              <p className="mt-2 font-mono text-2xl font-semibold">{analyticsRows.length}</p>
+            <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
+              <p className="text-xs font-medium text-muted-foreground">CSV report rows</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums">{analyticsRows.length}</p>
               <p className="mt-1 text-xs text-muted-foreground">Summary and top signals</p>
             </div>
           </CardContent>
@@ -429,7 +427,7 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
           <IntelList title="Top CVEs" description="Most repeated identifiers." items={topCves} empty="No CVEs extracted" />
           <IntelList title="NSE Scripts" description="Most common finding sources." items={topScripts} empty="No vulnerable scripts" />
           <IntelList title="Top Ports" description="Most frequent exposed ports." items={topPorts} empty="No open ports" />
-          <Card className="terminal-surface">
+          <Card>
             <CardHeader className="pb-3">
               <CardTitle>Risk Queue</CardTitle>
               <CardDescription>Hosts ranked by findings and exposure.</CardDescription>
@@ -437,7 +435,7 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
             <CardContent className="space-y-2">
               {stats.riskyHosts.length ? (
                 stats.riskyHosts.map((host) => (
-                  <div key={host.host} className="rounded-lg border bg-background/60 px-3 py-2">
+                  <div key={host.host} className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2">
                     <div className="flex items-center justify-between gap-3">
                       <p className="min-w-0 truncate text-sm font-medium">{host.host}</p>
                       <SeverityBadge severity={host.highestSeverity} />
@@ -448,7 +446,7 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
                   </div>
                 ))
               ) : (
-                <div className="flex h-40 items-center justify-center rounded-lg border border-dashed bg-background/50 text-sm text-muted-foreground">
+                <div className="flex h-40 items-center justify-center rounded-lg border border-dashed bg-muted/10 text-sm text-muted-foreground">
                   <ShieldCheck className="mr-2 h-4 w-4" />
                   No risky hosts in scope
                 </div>

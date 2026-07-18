@@ -31,7 +31,7 @@ export default function RawDataView({ dataset }) {
         </Button>
       </CardHeader>
       <CardContent>
-        <pre className="max-h-[70vh] overflow-auto whitespace-pre-wrap rounded-lg border bg-muted/30 p-4 text-xs">{json}</pre>
+        <pre className="max-h-[70vh] overflow-auto whitespace-pre-wrap rounded-lg border border-border/70 bg-muted/30 p-4 font-mono text-xs">{json}</pre>
       </CardContent>
     </Card>
   );

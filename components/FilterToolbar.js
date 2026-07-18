@@ -59,7 +59,7 @@ function ActiveFilterChip({ label, onRemove }) {
     <button
       type="button"
       onClick={onRemove}
-      className="inline-flex max-w-full items-center gap-1 rounded-md border bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground focus-ring"
+      className="inline-flex max-w-full items-center gap-1 rounded-md border border-border/70 bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground focus-ring"
       title={`Remove ${label}`}
     >
       <span className="truncate">{label}</span>
@@ -140,11 +140,11 @@ export default function FilterToolbar({ filters, options, onChange, className })
   ].filter(Boolean);
 
   return (
-    <div className={cn("sticky top-0 z-30 border-b bg-background/94 backdrop-blur supports-[backdrop-filter]:bg-background/85", className)}>
-      <div className="mx-auto flex max-w-[1600px] flex-col gap-3 px-4 py-3 lg:px-6">
+    <div className={cn("sticky top-0 z-30 border-b border-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85", className)}>
+      <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-3 px-4 py-3 lg:px-6">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
           <div className="flex items-center gap-2 text-sm font-medium">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg border bg-muted/20 text-primary">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/70 bg-muted/30 text-primary">
               <Filter className="h-4 w-4" />
             </span>
             <span>Search scope</span>
@@ -155,7 +155,7 @@ export default function FilterToolbar({ filters, options, onChange, className })
             <Input
               value={filters.query}
               onChange={(event) => update({ query: event.target.value })}
-              className="h-11 border-primary/20 bg-background/90 pl-9 font-mono"
+              className="h-11 bg-background pl-9"
               placeholder="Search hosts, services, CVEs, titles, scripts, evidence"
             />
           </div>
@@ -182,19 +182,19 @@ export default function FilterToolbar({ filters, options, onChange, className })
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-72 p-3">
                 <div className="space-y-3">
-                  <label className="grid gap-1 text-xs font-medium uppercase text-muted-foreground">
+                  <label className="grid gap-1 text-xs font-medium text-muted-foreground">
                     Port
                     <Input value={filters.port} onChange={(event) => update({ port: event.target.value })} placeholder="445" />
                   </label>
-                  <label className="grid gap-1 text-xs font-medium uppercase text-muted-foreground">
+                  <label className="grid gap-1 text-xs font-medium text-muted-foreground">
                     CVE
                     <Input value={filters.cve} onChange={(event) => update({ cve: event.target.value })} placeholder="CVE-2017-0144" />
                   </label>
-                  <label className="grid gap-1 text-xs font-medium uppercase text-muted-foreground">
+                  <label className="grid gap-1 text-xs font-medium text-muted-foreground">
                     OS family
                     <Input value={filters.os} onChange={(event) => update({ os: event.target.value })} placeholder="Linux" />
                   </label>
-                  <label className="grid gap-1 text-xs font-medium uppercase text-muted-foreground">
+                  <label className="grid gap-1 text-xs font-medium text-muted-foreground">
                     Vulnerability filter
                     <select
                       value={filters.vulnerabilityMode}
@@ -229,7 +229,7 @@ export default function FilterToolbar({ filters, options, onChange, className })
         </div>
         {activeChips.length ? (
           <div className="flex flex-wrap items-center gap-2 border-t pt-3">
-            <span className="text-xs font-medium uppercase text-muted-foreground">Active filters</span>
+            <span className="text-xs font-medium text-muted-foreground">Active filters</span>
             {activeChips.map((chip) => (
               <ActiveFilterChip key={chip.key} label={chip.label} onRemove={chip.onRemove} />
             ))}

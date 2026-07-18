@@ -11,7 +11,7 @@ export default function PaginationControls({ page, pageSize, total, onPageChange
   const setPage = (nextPage) => onPageChange(Math.min(Math.max(1, nextPage), pageCount));
 
   return (
-    <div className="flex flex-col gap-3 border-t bg-muted/10 px-4 py-3 text-sm xl:flex-row xl:items-center xl:justify-between">
+    <div className="flex flex-col gap-3 border-t border-border/70 bg-muted/10 px-4 py-3 text-sm xl:flex-row xl:items-center xl:justify-between">
       <div className="flex flex-col gap-1">
         <span className="font-medium">
           Showing {start}-{end} of {total}
@@ -45,7 +45,7 @@ export default function PaginationControls({ page, pageSize, total, onPageChange
           <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)} aria-label="Previous page">
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <div className="flex h-8 min-w-20 items-center justify-center rounded-lg border bg-background px-3 font-mono text-xs">
+          <div className="flex h-8 min-w-20 items-center justify-center rounded-lg border border-border/70 bg-background px-3 text-xs font-medium tabular-nums">
             {page}/{pageCount}
           </div>
           <Button variant="outline" size="sm" disabled={page >= pageCount} onClick={() => setPage(page + 1)} aria-label="Next page">

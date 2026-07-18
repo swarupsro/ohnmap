@@ -17,7 +17,7 @@ function SortButton({ label, column, sort, setSort }) {
     <Button
       variant="ghost"
       size="sm"
-      className="h-8 px-0 text-xs uppercase text-muted-foreground hover:bg-transparent"
+      className="h-8 px-0 text-xs font-medium text-muted-foreground hover:bg-transparent"
       onClick={() =>
         setSort((current) => ({
           column,
@@ -86,7 +86,16 @@ export default function HostsTable({ hosts, onSelectHost }) {
           <TableBody>
             {pageRows.map((host) => (
               <TableRow key={host.id} className="cursor-pointer" onClick={() => onSelectHost(host)}>
-                <TableCell className="font-medium">{host.ip || host.label}</TableCell>
+                <TableCell className="font-medium">
+                  <span className="inline-flex items-center gap-2">
+                    {host.ip || host.label}
+                    {host.scanIds?.length > 1 ? (
+                      <Badge variant="secondary" className="font-normal">
+                        {host.scanIds.length} scans
+                      </Badge>
+                    ) : null}
+                  </span>
+                </TableCell>
                 <TableCell className="text-muted-foreground">{host.hostname || "-"}</TableCell>
                 <TableCell>
                   <Badge variant={host.status === "up" ? "default" : "outline"}>{host.status}</Badge>

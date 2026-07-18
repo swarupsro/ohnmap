@@ -19,20 +19,19 @@ module.exports = {
     extend: {
       fontFamily: {
         sans: [
-          "Cascadia Code",
-          "Cascadia Mono",
-          "JetBrains Mono",
-          "Fira Code",
-          "SFMono-Regular",
-          "Consolas",
-          "Liberation Mono",
-          "Menlo",
-          "monospace"
+          "var(--font-sans)",
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Roboto",
+          "Helvetica Neue",
+          "Arial",
+          "sans-serif"
         ],
         mono: [
-          "Cascadia Code",
-          "Cascadia Mono",
           "JetBrains Mono",
+          "Cascadia Code",
           "Fira Code",
           "SFMono-Regular",
           "Consolas",
@@ -78,9 +77,9 @@ module.exports = {
         severity: {
           critical: "#e11d48",
           high: "#f97316",
-          medium: "#eab308",
-          low: "#14b8a6",
-          info: "#6b7280"
+          medium: "#f59e0b",
+          low: "#0ea5e9",
+          info: "#64748b"
         }
       },
       borderRadius: {
@@ -89,7 +88,7 @@ module.exports = {
         sm: "calc(var(--radius) - 4px)"
       },
       boxShadow: {
-        soft: "0 18px 48px rgba(15, 17, 21, 0.10)"
+        soft: "0 2px 4px rgba(15, 17, 21, 0.03), 0 12px 24px rgba(15, 17, 21, 0.06)"
       }
     }
   },

@@ -39,19 +39,19 @@ export default function CVEAccordion({ cves, vulnerabilities, onSelectVulnerabil
                 <AccordionContent>
                   <div className="grid gap-4 lg:grid-cols-3">
                     <div className="rounded-lg border p-3">
-                      <p className="text-xs uppercase text-muted-foreground">Hosts</p>
+                      <p className="text-xs font-medium text-muted-foreground">Hosts</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {entry.hosts.map((host) => <Badge key={host} variant="outline">{host}</Badge>)}
                       </div>
                     </div>
                     <div className="rounded-lg border p-3">
-                      <p className="text-xs uppercase text-muted-foreground">Services</p>
+                      <p className="text-xs font-medium text-muted-foreground">Services</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {entry.services.map((service) => <Badge key={service} variant="secondary">{service}</Badge>)}
                       </div>
                     </div>
                     <div className="rounded-lg border p-3">
-                      <p className="text-xs uppercase text-muted-foreground">Ports</p>
+                      <p className="text-xs font-medium text-muted-foreground">Ports</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {entry.ports.map((port) => <Badge key={port} variant="outline">{port}</Badge>)}
                       </div>
@@ -59,7 +59,7 @@ export default function CVEAccordion({ cves, vulnerabilities, onSelectVulnerabil
                   </div>
 
                   <div className="mt-4 space-y-2">
-                    <p className="text-xs font-semibold uppercase text-muted-foreground">Related findings</p>
+                    <p className="text-xs font-semibold text-muted-foreground">Related findings</p>
                     {relatedFindings.map((finding) => (
                       <button
                         key={finding.id}
@@ -75,7 +75,7 @@ export default function CVEAccordion({ cves, vulnerabilities, onSelectVulnerabil
 
                   {entry.references?.length ? (
                     <div className="mt-4 space-y-2">
-                      <p className="text-xs font-semibold uppercase text-muted-foreground">References</p>
+                      <p className="text-xs font-semibold text-muted-foreground">References</p>
                       {entry.references.slice(0, 6).map((reference) => (
                         <a
                           key={reference}

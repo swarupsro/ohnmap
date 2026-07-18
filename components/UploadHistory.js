@@ -38,7 +38,7 @@ export default function UploadHistory({ scans, onRemoveScan, onClearScans, isEmp
         </CardHeader>
         <CardContent className="space-y-3">
           {scans.map((scan) => (
-            <div key={scan.id} className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div key={scan.id} className="flex flex-col gap-3 rounded-lg border border-border/70 bg-muted/10 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="truncate font-semibold">{scan.fileName}</p>
@@ -71,33 +71,33 @@ export default function UploadHistory({ scans, onRemoveScan, onClearScans, isEmp
           <div className="grid gap-3 md:grid-cols-2">
             <label className="grid gap-1 text-sm font-medium">
               Baseline
-              <select value={baseId} onChange={(event) => setBaseId(event.target.value)} className="h-10 rounded-lg border bg-background px-3 focus-ring">
+              <select value={baseId} onChange={(event) => setBaseId(event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 text-sm focus-ring">
                 {scans.map((scan) => <option key={scan.id} value={scan.id}>{scan.fileName}</option>)}
               </select>
             </label>
             <label className="grid gap-1 text-sm font-medium">
               Current
-              <select value={compareId} onChange={(event) => setCompareId(event.target.value)} className="h-10 rounded-lg border bg-background px-3 focus-ring">
+              <select value={compareId} onChange={(event) => setCompareId(event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 text-sm focus-ring">
                 {scans.map((scan) => <option key={scan.id} value={scan.id}>{scan.fileName}</option>)}
               </select>
             </label>
           </div>
           <div className="grid gap-3 md:grid-cols-4">
-            <div className="rounded-lg border p-3">
-              <p className="text-xs uppercase text-muted-foreground">New ports</p>
-              <p className="mt-1 text-2xl font-semibold">{diff.newPorts.length}</p>
+            <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+              <p className="text-xs font-medium text-muted-foreground">New ports</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums">{diff.newPorts.length}</p>
             </div>
-            <div className="rounded-lg border p-3">
-              <p className="text-xs uppercase text-muted-foreground">Removed ports</p>
-              <p className="mt-1 text-2xl font-semibold">{diff.removedPorts.length}</p>
+            <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+              <p className="text-xs font-medium text-muted-foreground">Removed ports</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums">{diff.removedPorts.length}</p>
             </div>
-            <div className="rounded-lg border p-3">
-              <p className="text-xs uppercase text-muted-foreground">New findings</p>
-              <p className="mt-1 text-2xl font-semibold">{diff.newVulnerabilities.length}</p>
+            <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+              <p className="text-xs font-medium text-muted-foreground">New findings</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums">{diff.newVulnerabilities.length}</p>
             </div>
-            <div className="rounded-lg border p-3">
-              <p className="text-xs uppercase text-muted-foreground">Fixed findings</p>
-              <p className="mt-1 text-2xl font-semibold">{diff.fixedVulnerabilities.length}</p>
+            <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+              <p className="text-xs font-medium text-muted-foreground">Fixed findings</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums">{diff.fixedVulnerabilities.length}</p>
             </div>
           </div>
         </CardContent>

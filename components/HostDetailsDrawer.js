@@ -3,39 +3,46 @@
 import { ExternalLink } from "lucide-react";
 
 import SeverityBadge from "@/components/SeverityBadge";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatDateTime } from "@/lib/utils";
 
 export default function HostDetailsDrawer({ host, open, onOpenChange }) {
   if (!host) return null;
   const cves = [...new Set((host.vulnerabilities || []).flatMap((finding) => finding.cves || []))];
+  const scripts = [...(host.hostScripts || []), ...(host.ports || []).flatMap((port) => port.scriptResults || [])];
+  const sources = host.sources?.length ? host.sources : [{ scanId: host.scanId, scanFileName: host.scanFileName, scanUploadedAt: host.scanUploadedAt, rawBlock: host.rawBlock }];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="right-0 left-auto top-0 h-screen max-h-screen w-full max-w-4xl translate-x-0 translate-y-0 rounded-none sm:rounded-l-lg">
+      <DialogContent className="right-0 left-auto top-0 h-screen max-h-screen w-full max-w-4xl translate-x-0 translate-y-0 rounded-none sm:rounded-l-xl">
         <DialogHeader>
-          <DialogTitle>{host.ip || host.label}</DialogTitle>
+          <div className="flex flex-wrap items-center gap-2">
+            <DialogTitle>{host.ip || host.label}</DialogTitle>
+            {sources.length > 1 ? <Badge variant="secondary">{sources.length} scans</Badge> : null}
+          </div>
           <DialogDescription>
             {host.hostname || "No hostname"} · {host.status} · {host.scanFileName}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-lg border p-3">
-            <p className="text-xs uppercase text-muted-foreground">Latency</p>
+          <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+            <p className="text-xs font-medium text-muted-foreground">Latency</p>
             <p className="mt-1 font-semibold">{host.latency || "Unknown"}</p>
           </div>
-          <div className="rounded-lg border p-3">
-            <p className="text-xs uppercase text-muted-foreground">Open ports</p>
-            <p className="mt-1 font-semibold">{host.openPortsCount || 0}</p>
+          <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+            <p className="text-xs font-medium text-muted-foreground">Open ports</p>
+            <p className="mt-1 font-semibold tabular-nums">{host.openPortsCount || 0}</p>
           </div>
-          <div className="rounded-lg border p-3">
-            <p className="text-xs uppercase text-muted-foreground">Findings</p>
-            <p className="mt-1 font-semibold">{host.vulnerabilities?.length || 0}</p>
+          <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+            <p className="text-xs font-medium text-muted-foreground">Findings</p>
+            <p className="mt-1 font-semibold tabular-nums">{host.vulnerabilities?.length || 0}</p>
           </div>
-          <div className="rounded-lg border p-3">
-            <p className="text-xs uppercase text-muted-foreground">Highest severity</p>
+          <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+            <p className="text-xs font-medium text-muted-foreground">Highest severity</p>
             <div className="mt-1">
               <SeverityBadge severity={host.highestSeverity} />
             </div>
@@ -44,7 +51,7 @@ export default function HostDetailsDrawer({ host, open, onOpenChange }) {
 
         <section className="space-y-2">
           <h3 className="font-semibold">OS Detection</h3>
-          <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+          <div className="rounded-lg border border-border/70 bg-muted/20 p-3 text-sm">
             {host.osGuess || "No OS guess captured."}
             {host.os?.cpe ? <p className="mt-1 text-muted-foreground">{host.os.cpe}</p> : null}
           </div>
@@ -89,7 +96,7 @@ export default function HostDetailsDrawer({ host, open, onOpenChange }) {
           {host.vulnerabilities?.length ? (
             <div className="space-y-2">
               {host.vulnerabilities.map((finding) => (
-                <div key={finding.id} className="rounded-lg border p-3">
+                <div key={finding.id} className="rounded-lg border border-border/70 p-3">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="font-medium">{finding.title}</p>
@@ -124,7 +131,7 @@ export default function HostDetailsDrawer({ host, open, onOpenChange }) {
                   href={`https://nvd.nist.gov/vuln/detail/${cve}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium hover:bg-muted"
+                  className="inline-flex items-center gap-1 rounded-md border border-border/70 px-2.5 py-1 text-xs font-medium hover:bg-muted"
                 >
                   {cve}
                   <ExternalLink className="h-3 w-3" />
@@ -138,22 +145,45 @@ export default function HostDetailsDrawer({ host, open, onOpenChange }) {
 
         <section className="space-y-2">
           <h3 className="font-semibold">Script Results</h3>
-          <div className="space-y-2">
-            {[...(host.hostScripts || []), ...(host.ports || []).flatMap((port) => port.scriptResults || [])].map((script) => (
-              <details key={script.id} className="rounded-lg border p-3">
-                <summary className="cursor-pointer font-medium">{script.name}</summary>
-                <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded-lg bg-muted p-3 text-xs">{script.raw || script.output}</pre>
-              </details>
-            ))}
-            {!host.hostScripts?.length && !(host.ports || []).some((port) => port.scriptResults?.length) ? (
-              <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No NSE script output captured.</div>
-            ) : null}
-          </div>
+          {scripts.length ? (
+            <Accordion type="multiple" className="w-full rounded-lg border border-border/70">
+              {scripts.map((script) => (
+                <AccordionItem key={script.id} value={script.id} className="border-border/70 px-3 last:border-b-0">
+                  <AccordionTrigger className="text-sm">{script.name}</AccordionTrigger>
+                  <AccordionContent>
+                    <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-lg border border-border/70 bg-muted/30 p-3 font-mono text-xs">
+                      {script.raw || script.output}
+                    </pre>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          ) : (
+            <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No NSE script output captured.</div>
+          )}
         </section>
 
         <section className="space-y-2">
           <h3 className="font-semibold">Raw Host Block</h3>
-          <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-lg border bg-muted/30 p-3 text-xs">{host.rawBlock}</pre>
+          {sources.length > 1 ? (
+            <Accordion type="multiple" className="w-full rounded-lg border border-border/70">
+              {sources.map((source) => (
+                <AccordionItem key={source.scanId} value={source.scanId} className="border-border/70 px-3 last:border-b-0">
+                  <AccordionTrigger className="text-sm">
+                    {source.scanFileName}
+                    <span className="ml-2 font-normal text-muted-foreground">{formatDateTime(source.scanUploadedAt)}</span>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-lg border border-border/70 bg-muted/30 p-3 font-mono text-xs">
+                      {source.rawBlock}
+                    </pre>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          ) : (
+            <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-lg border border-border/70 bg-muted/30 p-3 font-mono text-xs">{sources[0].rawBlock}</pre>
+          )}
         </section>
       </DialogContent>
     </Dialog>

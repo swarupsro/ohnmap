@@ -34,17 +34,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { applyFilters, buildDataset, DEFAULT_FILTERS } from "@/lib/analytics";
 import { clearStoredScans, loadStoredScans, saveStoredScans } from "@/lib/storage";
-import { formatDateTime } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import { parseNmapText } from "@/parser/nmapTextParser";
 
 const views = [
-  { id: "overview", label: "Overview", icon: Home },
-  { id: "hosts", label: "Hosts", icon: Server },
-  { id: "vulnerabilities", label: "Vulnerabilities", icon: ShieldAlert },
-  { id: "cves", label: "CVEs", icon: Bug },
-  { id: "services", label: "Services", icon: Layers3 },
-  { id: "history", label: "Upload History", icon: FileClock },
-  { id: "raw", label: "Raw Data", icon: Braces }
+  { id: "overview", label: "Overview", icon: Home, description: "Exposure summary, risk signals, and analytics." },
+  { id: "hosts", label: "Hosts", icon: Server, description: "Every host discovered in the current scope." },
+  { id: "vulnerabilities", label: "Vulnerabilities", icon: ShieldAlert, description: "NSE findings ranked by inferred severity." },
+  { id: "cves", label: "CVEs", icon: Bug, description: "CVE identifiers aggregated across findings." },
+  { id: "services", label: "Services", icon: Layers3, description: "Open services and their exposure footprint." },
+  { id: "history", label: "Upload History", icon: FileClock, description: "Stored scans, removal, and scan-to-scan diffing." },
+  { id: "raw", label: "Raw Data", icon: Braces, description: "Normalized parsed data for debugging and export." }
 ];
 
 function readFileAsText(file) {
@@ -59,8 +59,8 @@ function DashboardApp() {
   const [theme, setTheme] = useState("dark");
   const [parsing, setParsing] = useState(false);
   const [errors, setErrors] = useState([]);
-  const [selectedHost, setSelectedHost] = useState(null);
-  const [selectedVulnerability, setSelectedVulnerability] = useState(null);
+  const [selectedHostId, setSelectedHostId] = useState(null);
+  const [selectedVulnerabilityId, setSelectedVulnerabilityId] = useState(null);
 
   useEffect(() => {
     setScans(loadStoredScans());
@@ -81,6 +81,18 @@ function DashboardApp() {
   const activeScans = scans;
   const dataset = useMemo(() => buildDataset(activeScans), [activeScans]);
   const filteredDataset = useMemo(() => applyFilters(dataset, filters), [dataset, filters]);
+
+  // Hosts/findings are recomputed (and can be re-merged) on every scans change, so the
+  // drawers look the selected id up live each render instead of holding a stale object
+  // reference from whichever render they were opened on.
+  const selectedHost = useMemo(
+    () => (selectedHostId ? filteredDataset.hosts.find((host) => host.id === selectedHostId) || null : null),
+    [filteredDataset, selectedHostId]
+  );
+  const selectedVulnerability = useMemo(
+    () => (selectedVulnerabilityId ? filteredDataset.vulnerabilities.find((finding) => finding.id === selectedVulnerabilityId) || null : null),
+    [filteredDataset, selectedVulnerabilityId]
+  );
 
   const handleFiles = async (files) => {
     setParsing(true);
@@ -169,42 +181,42 @@ function DashboardApp() {
               onReset={resetOldData}
               canReset={Boolean(scans.length)}
             />
-            <Card className="terminal-surface overflow-hidden">
-              <CardHeader className="border-b bg-muted/20">
+            <Card className="overflow-hidden">
+              <CardHeader className="border-b border-border/70">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <CardTitle>Target Intake Console</CardTitle>
+                    <CardTitle>Scan Intake</CardTitle>
                     <CardDescription>Parse scope, command metadata, and local data controls.</CardDescription>
                   </div>
-                  <Badge variant={isEmpty ? "outline" : "default"}>{isEmpty ? "Ready" : "Local data"}</Badge>
+                  <Badge variant={isEmpty ? "outline" : "secondary"}>{isEmpty ? "Ready" : "Local data"}</Badge>
                 </div>
               </CardHeader>
               <CardContent className="grid gap-3 p-5 sm:grid-cols-2">
-                <div className="rounded-lg border bg-background p-4">
-                  <p className="text-xs uppercase text-muted-foreground">Latest upload</p>
+                <div className="rounded-lg border border-border/70 bg-muted/30 p-4">
+                  <p className="text-xs font-medium text-muted-foreground">Latest upload</p>
                   <p className="mt-1 truncate font-semibold">
                     {scans[0]?.fileName || "No scan uploaded"}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">{scans[0]?.uploadedAt ? formatDateTime(scans[0]?.uploadedAt) : "Waiting for first scan"}</p>
                 </div>
-                <div className="rounded-lg border bg-background p-4">
-                  <p className="text-xs uppercase text-muted-foreground">Nmap version</p>
+                <div className="rounded-lg border border-border/70 bg-muted/30 p-4">
+                  <p className="text-xs font-medium text-muted-foreground">Nmap version</p>
                   <p className="mt-1 font-semibold">{activeScans[0]?.nmapVersion || "Unknown"}</p>
                 </div>
-                <div className="rounded-lg border bg-background p-4 sm:col-span-2">
-                  <p className="text-xs uppercase text-muted-foreground">Command</p>
-                  <pre className="mt-2 max-h-28 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-muted p-3 text-xs leading-5">
+                <div className="rounded-lg border border-border/70 bg-muted/30 p-4 sm:col-span-2">
+                  <p className="text-xs font-medium text-muted-foreground">Command</p>
+                  <pre className="mt-2 max-h-28 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border/70 bg-background p-3 font-mono text-xs leading-5">
                     {activeScans[0]?.command || "Command metadata unavailable"}
                   </pre>
                 </div>
-                <div className="rounded-lg border bg-background p-4">
-                  <p className="text-xs uppercase text-muted-foreground">Stored scans</p>
-                  <p className="mt-1 text-2xl font-semibold">{scans.length}</p>
+                <div className="rounded-lg border border-border/70 bg-muted/30 p-4">
+                  <p className="text-xs font-medium text-muted-foreground">Stored scans</p>
+                  <p className="mt-1 text-2xl font-semibold tabular-nums">{scans.length}</p>
                   <p className="mt-1 text-xs text-muted-foreground">Reset removes browser-stored scan history.</p>
                 </div>
-                <div className="flex flex-col justify-between gap-3 rounded-lg border bg-background p-4">
+                <div className="flex flex-col justify-between gap-3 rounded-lg border border-border/70 bg-muted/30 p-4">
                   <div>
-                    <p className="text-xs uppercase text-muted-foreground">Data controls</p>
+                    <p className="text-xs font-medium text-muted-foreground">Data controls</p>
                   <p className="mt-1 text-sm text-muted-foreground">Clear old uploads before starting a fresh review.</p>
                   </div>
                   <Button variant="destructive" size="sm" className="gap-2 self-start" disabled={!scans.length} onClick={resetOldData}>
@@ -244,14 +256,14 @@ function DashboardApp() {
     }
 
     if (activeView === "hosts") {
-      return <HostsTable hosts={filteredDataset.hosts} onSelectHost={setSelectedHost} />;
+      return <HostsTable hosts={filteredDataset.hosts} onSelectHost={(host) => setSelectedHostId(host.id)} />;
     }
 
     if (activeView === "vulnerabilities") {
       return (
         <VulnerabilityTable
           vulnerabilities={filteredDataset.vulnerabilities}
-          onSelectVulnerability={setSelectedVulnerability}
+          onSelectVulnerability={(finding) => setSelectedVulnerabilityId(finding.id)}
         />
       );
     }
@@ -261,7 +273,7 @@ function DashboardApp() {
         <CVEAccordion
           cves={filteredDataset.cves}
           vulnerabilities={filteredDataset.vulnerabilities}
-          onSelectVulnerability={setSelectedVulnerability}
+          onSelectVulnerability={(finding) => setSelectedVulnerabilityId(finding.id)}
         />
       );
     }
@@ -284,50 +296,100 @@ function DashboardApp() {
     return <RawDataView dataset={dataset} />;
   };
 
+  const activeViewMeta = views.find((view) => view.id === activeView) || views[0];
+
   return (
-    <div className="min-h-screen bg-background app-grid">
-      <header className="border-b bg-background/94 backdrop-blur supports-[backdrop-filter]:bg-background/85">
-        <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex min-w-0 items-start gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <ScanSearch className="h-6 w-6" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-2xl font-semibold tracking-normal">Nmap Insight Dashboard</h1>
-                  <Badge variant={isEmpty ? "outline" : "default"}>{isEmpty ? "No scan loaded" : "Live local"}</Badge>
-                  <span className="rounded-md border bg-muted/30 px-2 py-1 font-mono text-xs text-primary">local://parser</span>
-                </div>
-                <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-                  Upload normal text .nmap files, triage NSE findings, and keep scan evidence local to this browser.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="hidden items-center gap-2 rounded-lg border bg-muted/20 px-3 py-2 text-xs text-muted-foreground sm:flex">
-                <Database className="h-4 w-4 text-primary" />
-                {`${scans.length} stored scans`}
-              </div>
-              <Button variant="destructive" className="gap-2" disabled={!scans.length} onClick={resetOldData}>
-                <RotateCcw className="h-4 w-4" />
-                Reset old data
-              </Button>
-              <Button variant="outline" className="gap-2" onClick={() => window.print()}>
-                <Printer className="h-4 w-4" />
-                Print
-              </Button>
-              <ExportMenu dataset={dataset} filteredDataset={filteredDataset} />
-              <ThemeToggle theme={theme} onChange={setTheme} />
-            </div>
+    <div className="flex min-h-screen bg-background">
+      <aside className="hidden w-64 shrink-0 border-r border-border/70 bg-card/40 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col">
+        <div className="flex items-center gap-3 border-b border-border/70 px-5 py-5">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <ScanSearch className="h-5 w-5" />
           </div>
-          <nav className="flex gap-2 overflow-x-auto rounded-lg border bg-muted/20 p-2">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold leading-tight">Nmap Insight</p>
+            <p className="truncate text-xs text-muted-foreground">Dashboard</p>
+          </div>
+        </div>
+
+        <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
+          {views.map((view) => {
+            const Icon = view.icon;
+            const active = activeView === view.id;
+            return (
+              <button
+                key={view.id}
+                type="button"
+                onClick={() => setActiveView(view.id)}
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-ring",
+                  active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {view.label}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="space-y-3 border-t border-border/70 px-4 py-4">
+          <div className="flex items-center justify-between rounded-lg border border-border/70 bg-background px-3 py-2 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <Database className="h-3.5 w-3.5 text-primary" />
+              Stored locally
+            </span>
+            <span className="font-medium text-foreground">{scans.length}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="flex-1 gap-2" disabled={!scans.length} onClick={resetOldData}>
+              <RotateCcw className="h-3.5 w-3.5" />
+              Reset
+            </Button>
+            <ThemeToggle theme={theme} onChange={setTheme} />
+          </div>
+        </div>
+      </aside>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-40 border-b border-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
+          <div className="flex flex-col gap-3 px-4 py-4 lg:px-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3 lg:hidden">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  <ScanSearch className="h-5 w-5" />
+                </div>
+                <p className="truncate text-sm font-semibold">Nmap Insight Dashboard</p>
+              </div>
+              <div className="hidden min-w-0 lg:block">
+                <h1 className="text-lg font-semibold">{activeViewMeta.label}</h1>
+                <p className="text-sm text-muted-foreground">{activeViewMeta.description}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={isEmpty ? "outline" : "secondary"} className="hidden sm:inline-flex">
+                  {isEmpty ? "No scan loaded" : `${scans.length} stored scan${scans.length === 1 ? "" : "s"}`}
+                </Badge>
+                <Button variant="outline" size="sm" className="gap-2 lg:hidden" disabled={!scans.length} onClick={resetOldData}>
+                  <RotateCcw className="h-4 w-4" />
+                  Reset
+                </Button>
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => window.print()}>
+                  <Printer className="h-4 w-4" />
+                  Print
+                </Button>
+                <ExportMenu dataset={dataset} filteredDataset={filteredDataset} />
+                <div className="lg:hidden">
+                  <ThemeToggle theme={theme} onChange={setTheme} />
+                </div>
+              </div>
+            </div>
+
+            <nav className="flex gap-2 overflow-x-auto rounded-lg border border-border/70 bg-muted/30 p-1.5 lg:hidden">
               {views.map((view) => {
                 const Icon = view.icon;
                 return (
                   <Button
                     key={view.id}
-                    variant={activeView === view.id ? "default" : "outline"}
+                    variant={activeView === view.id ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setActiveView(view.id)}
                     className="shrink-0 gap-2"
@@ -337,21 +399,22 @@ function DashboardApp() {
                   </Button>
                 );
               })}
-          </nav>
-        </div>
-      </header>
+            </nav>
+          </div>
+        </header>
 
-      <FilterToolbar filters={filters} options={dataset.options} onChange={setFilters} />
+        <FilterToolbar filters={filters} options={dataset.options} onChange={setFilters} />
 
-      <main className="mx-auto max-w-[1600px] px-4 py-6 lg:px-6 print:px-0">
-        {renderView()}
-      </main>
+        <main className="mx-auto w-full max-w-[1500px] flex-1 px-4 py-6 lg:px-6 print:px-0">
+          {renderView()}
+        </main>
+      </div>
 
-      <HostDetailsDrawer host={selectedHost} open={Boolean(selectedHost)} onOpenChange={(open) => !open && setSelectedHost(null)} />
+      <HostDetailsDrawer host={selectedHost} open={Boolean(selectedHost)} onOpenChange={(open) => !open && setSelectedHostId(null)} />
       <VulnerabilityDetailsDrawer
         finding={selectedVulnerability}
         open={Boolean(selectedVulnerability)}
-        onOpenChange={(open) => !open && setSelectedVulnerability(null)}
+        onOpenChange={(open) => !open && setSelectedVulnerabilityId(null)}
       />
     </div>
   );
