@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -14,6 +15,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   ShieldOff,
+  Undo2,
   WifiOff
 } from "lucide-react";
 import {
@@ -31,6 +33,7 @@ import {
 } from "recharts";
 
 import SeverityBadge from "@/components/SeverityBadge";
+import StatDetailsDrawer from "@/components/StatDetailsDrawer";
 import StatsCard from "@/components/StatsCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -223,8 +226,18 @@ function SeverityFilterCard({ severity, count, active, onClick }) {
   );
 }
 
-export default function OverviewDashboard({ dataset, isEmpty, activeSeverities = [], onSeverityToggle, onOpenView }) {
+export default function OverviewDashboard({
+  dataset,
+  isEmpty,
+  activeSeverities = [],
+  onSeverityToggle,
+  onOpenView,
+  onSelectHost,
+  onSelectVulnerability,
+  onToggleFalsePositive
+}) {
   const { stats } = dataset;
+  const [statView, setStatView] = useState(null);
   const analyticsRows = buildAnalyticsReportRows(stats);
   const exportAnalyticsReport = () => {
     const stamp = new Date().toISOString().slice(0, 10);
@@ -244,6 +257,116 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
     { name: "Active", value: stats.totalVulnerabilities },
     { name: "False Positive", value: falsePositiveCount }
   ].filter((item) => item.value > 0);
+
+  const unreachableRows = (dataset.hosts || [])
+    .filter((host) => host.status === "down")
+    .map((host) => ({
+      id: host.id,
+      primary: host.ip || host.label,
+      secondary: host.hostname || "No hostname",
+      meta: [host.reason, host.scanFileName].filter(Boolean).join(" · ") || undefined,
+      copyText: host.ip || host.label,
+      onClick: onSelectHost
+        ? () => {
+            setStatView(null);
+            onSelectHost(host);
+          }
+        : undefined
+    }));
+
+  const criticalRows = (dataset.vulnerabilities || [])
+    .filter((finding) => finding.severity === "Critical" && !finding.isFalsePositive)
+    .map((finding) => ({
+      id: finding.id,
+      primary: finding.title,
+      secondary: `${finding.host}${finding.port ? ` · ${finding.port}/${finding.protocol}` : " · host script"}`,
+      badge: <SeverityBadge severity={finding.severity} />,
+      meta: finding.scriptName,
+      copyText: `${finding.title} — ${finding.host}${finding.port ? ` ${finding.port}/${finding.protocol}` : ""}`,
+      onClick: onSelectVulnerability
+        ? () => {
+            setStatView(null);
+            onSelectVulnerability(finding);
+          }
+        : undefined
+    }));
+
+  const cveRows = (dataset.cves || []).map((entry) => ({
+    id: entry.id,
+    primary: entry.cve,
+    secondary: `${entry.hosts?.length || 0} host${entry.hosts?.length === 1 ? "" : "s"} · ${entry.occurrences} occurrence${entry.occurrences === 1 ? "" : "s"}`,
+    badge: <SeverityBadge severity={entry.highestSeverity} />,
+    meta: (entry.vulnerabilityTitles || []).slice(0, 2).join(", ") || undefined,
+    copyText: entry.cve,
+    onClick: () => window.open(`https://nvd.nist.gov/vuln/detail/${entry.cve}`, "_blank", "noreferrer")
+  }));
+
+  const falsePositiveRows = (dataset.vulnerabilities || [])
+    .filter((finding) => finding.isFalsePositive)
+    .map((finding) => ({
+      id: finding.id,
+      primary: finding.title,
+      secondary: `${finding.host}${finding.port ? ` · ${finding.port}/${finding.protocol}` : " · host script"}`,
+      badge: <SeverityBadge severity={finding.severity} />,
+      meta: finding.scriptName,
+      copyText: `${finding.title} — ${finding.host}${finding.port ? ` ${finding.port}/${finding.protocol}` : ""}`,
+      onClick: onSelectVulnerability
+        ? () => {
+            setStatView(null);
+            onSelectVulnerability(finding);
+          }
+        : undefined,
+      action: onToggleFalsePositive ? (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-success hover:bg-success/10"
+          title="Restore"
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleFalsePositive(finding.id);
+          }}
+        >
+          <Undo2 className="h-3.5 w-3.5" />
+        </Button>
+      ) : undefined
+    }));
+
+  const statViewConfig = {
+    unreachable: {
+      title: "Unreachable Hosts",
+      description: "Hosts reported down across the current scope. Click a row to open its details.",
+      icon: WifiOff,
+      rows: unreachableRows,
+      copyAllLabel: "Copy IPs",
+      emptyMessage: "No unreachable hosts in scope."
+    },
+    critical: {
+      title: "Critical Findings",
+      description: "Active Critical-severity findings (false positives excluded).",
+      icon: AlertTriangle,
+      rows: criticalRows,
+      copyAllLabel: "Copy list",
+      emptyMessage: "No critical findings in scope."
+    },
+    cves: {
+      title: "Common CVEs",
+      description: "Unique CVE identifiers aggregated across active findings.",
+      icon: Bug,
+      rows: cveRows,
+      copyAllLabel: "Copy CVE IDs",
+      emptyMessage: "No CVEs extracted."
+    },
+    falsePositives: {
+      title: "False Positives",
+      description: "Findings marked as false positive and excluded from graphs.",
+      icon: ShieldOff,
+      rows: falsePositiveRows,
+      copyAllLabel: "Copy list",
+      emptyMessage: "No findings marked as false positive."
+    }
+  };
+  const activeStatView = statView ? statViewConfig[statView] : null;
 
   return (
     <div className="space-y-6">
@@ -538,11 +661,50 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
       </section>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Critical Findings" value={stats.severityCounts.Critical || 0} icon={AlertTriangle} tone="danger" />
-        <StatsCard title="Unreachable Hosts" value={stats.hostsDown} icon={WifiOff} tone="muted" />
-        <StatsCard title="Common CVEs" value={stats.topCves.length} icon={Bug} tone="muted" />
-        <StatsCard title="False Positives" value={falsePositiveCount} icon={ShieldOff} tone="success" detail="Marked and excluded from graphs" />
+        <StatsCard
+          title="Critical Findings"
+          value={stats.severityCounts.Critical || 0}
+          icon={AlertTriangle}
+          tone="danger"
+          detail="Click for the list"
+          onClick={() => setStatView("critical")}
+        />
+        <StatsCard
+          title="Unreachable Hosts"
+          value={stats.hostsDown}
+          icon={WifiOff}
+          tone="muted"
+          detail="Click for the list"
+          onClick={() => setStatView("unreachable")}
+        />
+        <StatsCard
+          title="Common CVEs"
+          value={stats.totalCves}
+          icon={Bug}
+          tone="muted"
+          detail="Click for the list"
+          onClick={() => setStatView("cves")}
+        />
+        <StatsCard
+          title="False Positives"
+          value={falsePositiveCount}
+          icon={ShieldOff}
+          tone="success"
+          detail="Marked and excluded from graphs"
+          onClick={() => setStatView("falsePositives")}
+        />
       </div>
+
+      <StatDetailsDrawer
+        open={Boolean(activeStatView)}
+        onOpenChange={(open) => !open && setStatView(null)}
+        icon={activeStatView?.icon}
+        title={activeStatView?.title}
+        description={activeStatView?.description}
+        rows={activeStatView?.rows || []}
+        copyAllLabel={activeStatView?.copyAllLabel}
+        emptyMessage={activeStatView?.emptyMessage}
+      />
     </div>
   );
 }
