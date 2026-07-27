@@ -51,16 +51,16 @@ export default function ToastProvider({ children }) {
                     className={cn(
                       "absolute inset-y-0 left-0 w-1",
                       item.variant === "error" && "bg-destructive",
-                      item.variant === "success" && "bg-primary",
-                      item.variant === "info" && "bg-sky-500"
+                      item.variant === "success" && "bg-success",
+                      item.variant === "info" && "bg-primary"
                     )}
                   />
                   <Icon
                     className={cn(
                       "mt-0.5 h-4 w-4 shrink-0",
                       item.variant === "error" && "text-destructive",
-                      item.variant === "success" && "text-primary",
-                      item.variant === "info" && "text-sky-500"
+                      item.variant === "success" && "text-success",
+                      item.variant === "info" && "text-primary"
                     )}
                   />
                   <div className="min-w-0 flex-1">

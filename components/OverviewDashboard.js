@@ -13,6 +13,7 @@ import {
   Server,
   ShieldAlert,
   ShieldCheck,
+  ShieldOff,
   WifiOff
 } from "lucide-react";
 import {
@@ -20,6 +21,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  Legend,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -44,7 +46,18 @@ const severityColors = {
   Info: "#64748b"
 };
 
-const chartColors = ["#4f46e5", "#e11d48", "#f59e0b", "#f97316", "#0ea5e9", "#64748b", "#22c55e"];
+const RED = "#ef4444";
+const GREEN = "#22c55e";
+const GRAY = "#71717a";
+const GRAY_LIGHT = "#a1a1aa";
+
+const axisTick = { fill: "#a1a1aa", fontSize: 12 };
+const gridStroke = "#27272a";
+const hoverCursor = { fill: "rgba(239, 68, 68, 0.08)" };
+
+const reachabilityColors = { Reachable: GREEN, Unreachable: RED, Unknown: GRAY };
+const portStateColors = { Open: RED, Closed: GREEN, Filtered: GRAY, Other: GRAY_LIGHT };
+const dispositionColors = { Active: RED, "False Positive": GREEN };
 
 const analyticsCsvColumns = [
   { label: "Section", key: "section" },
@@ -60,7 +73,8 @@ function buildAnalyticsReportRows(stats) {
     ["Summary", "Reachable hosts", stats.hostsUp, "Hosts reported up"],
     ["Summary", "Unreachable hosts", stats.hostsDown, "Hosts reported down"],
     ["Summary", "Open ports", stats.totalOpenPorts, "Open services found"],
-    ["Summary", "Vulnerabilities", stats.totalVulnerabilities, `${stats.totalCves} unique CVEs`]
+    ["Summary", "Vulnerabilities", stats.totalVulnerabilities, `${stats.totalCves} unique CVEs`],
+    ["Summary", "False positives marked", stats.falsePositiveCount || 0, "Excluded from severity counts and graphs"]
   ];
 
   const severity = SEVERITIES.map((item) => ["Severity", item, stats.severityCounts[item] || 0, "Finding count"]);
@@ -86,10 +100,9 @@ function buildAnalyticsReportRows(stats) {
 function ChartFrame({ title, description, children, accent = "primary" }) {
   const accents = {
     primary: "bg-primary",
-    rose: "bg-rose-500",
-    amber: "bg-amber-500",
-    cyan: "bg-sky-500",
-    gray: "bg-slate-400"
+    danger: "bg-destructive",
+    success: "bg-success",
+    muted: "bg-muted-foreground"
   };
 
   return (
@@ -118,9 +131,46 @@ function EmptyChart() {
 function SimpleTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border bg-popover px-3 py-2 text-sm shadow">
+    <div className="rounded-lg border border-border/70 border-l-2 border-l-primary bg-popover px-3 py-2 text-sm shadow-soft">
       <p className="font-medium">{label || payload[0].name}</p>
-      <p className="text-muted-foreground">{payload[0].value}</p>
+      {payload.map((entry) => (
+        <p key={entry.dataKey || entry.name} className="text-muted-foreground">
+          {entry.name ? `${entry.name}: ` : ""}
+          {entry.value}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function DonutChart({ data, colors, totalLabel }) {
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+  return (
+    <div className="flex h-full flex-col">
+      <div className="relative min-h-0 flex-1">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={data} dataKey="value" nameKey="name" innerRadius={56} outerRadius={84} paddingAngle={3} strokeWidth={0}>
+              {data.map((entry) => (
+                <Cell key={entry.name} fill={colors[entry.name] || GRAY} />
+              ))}
+            </Pie>
+            <Tooltip content={<SimpleTooltip />} />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-2xl font-semibold tabular-nums">{total}</span>
+          <span className="text-[11px] text-muted-foreground">{totalLabel}</span>
+        </div>
+      </div>
+      <div className="mt-2 flex shrink-0 flex-wrap justify-center gap-x-4 gap-y-1 text-xs">
+        {data.map((entry) => (
+          <span key={entry.name} className="inline-flex items-center gap-1.5 text-muted-foreground">
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: colors[entry.name] || GRAY }} />
+            {entry.name} <span className="font-medium text-foreground">{entry.value}</span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -189,6 +239,11 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
     vulnerabilities: host.vulnerabilities,
     riskScore: Number(host.riskScore.toFixed(1))
   }));
+  const falsePositiveCount = stats.falsePositiveCount || 0;
+  const dispositionData = [
+    { name: "Active", value: stats.totalVulnerabilities },
+    { name: "False Positive", value: falsePositiveCount }
+  ].filter((item) => item.value > 0);
 
   return (
     <div className="space-y-6">
@@ -235,7 +290,7 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
             <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">Reachable hosts</p>
-                <Activity className="h-4 w-4 text-primary" />
+                <Activity className="h-4 w-4 text-success" />
               </div>
               <p className="mt-3 text-3xl font-semibold tabular-nums">{stats.hostsUp}</p>
               <p className="mt-1 text-xs text-muted-foreground">{stats.hostsDown} unreachable in scope</p>
@@ -274,6 +329,7 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
           value={stats.totalScans}
           icon={FileText}
           detail="Parsed files in scope"
+          tone="muted"
           onClick={() => onOpenView?.("history")}
         />
         <StatsCard
@@ -281,6 +337,7 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
           value={stats.totalHosts}
           icon={Server}
           detail={`${stats.hostsUp} reachable · ${stats.hostsDown} unreachable`}
+          tone="muted"
           onClick={() => onOpenView?.("hosts")}
         />
         <StatsCard
@@ -288,15 +345,15 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
           value={stats.totalOpenPorts}
           icon={Network}
           detail="Open services found"
-          tone="teal"
+          tone="default"
           onClick={() => onOpenView?.("services")}
         />
         <StatsCard
           title="Vulnerabilities"
           value={stats.totalVulnerabilities}
           icon={ShieldAlert}
-          detail={`${stats.totalCves} unique CVEs`}
-          tone="rose"
+          detail={`${stats.totalCves} unique CVEs${falsePositiveCount ? ` · ${falsePositiveCount} false positive` : ""}`}
+          tone="danger"
           onClick={() => onOpenView?.("vulnerabilities")}
         />
       </div>
@@ -327,7 +384,7 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
+          <CardContent className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-5">
             <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
               <p className="text-xs font-medium text-muted-foreground">Risk pressure</p>
               <p className="mt-2 text-2xl font-semibold tabular-nums">{(stats.severityCounts.Critical || 0) + (stats.severityCounts.High || 0)}</p>
@@ -344,6 +401,11 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
               <p className="mt-1 text-xs text-muted-foreground">{stats.riskyHosts[0]?.vulnerabilities || 0} findings</p>
             </div>
             <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
+              <p className="text-xs font-medium text-muted-foreground">False positives</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums text-success">{falsePositiveCount}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Excluded from graphs below</p>
+            </div>
+            <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
               <p className="text-xs font-medium text-muted-foreground">CSV report rows</p>
               <p className="mt-2 text-2xl font-semibold tabular-nums">{analyticsRows.length}</p>
               <p className="mt-1 text-xs text-muted-foreground">Summary and top signals</p>
@@ -352,15 +414,15 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
         </Card>
 
         <div className="grid gap-4 xl:grid-cols-2">
-          <ChartFrame title="Severity Signal" description="Findings grouped by inferred risk level." accent="rose">
+          <ChartFrame title="Severity Signal" description="Active findings grouped by inferred risk level." accent="danger">
             {stats.severityDistribution.some((item) => item.value > 0) ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.severityDistribution} layout="vertical" margin={{ left: 16, right: 18 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
-                  <YAxis type="category" dataKey="name" width={74} tickLine={false} axisLine={false} />
-                  <Tooltip content={<SimpleTooltip />} />
-                  <Bar dataKey="value" radius={[0, 6, 6, 0]}>
+                <BarChart data={stats.severityDistribution} layout="vertical" margin={{ left: 16, right: 24 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={gridStroke} />
+                  <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} tick={axisTick} />
+                  <YAxis type="category" dataKey="name" width={74} tickLine={false} axisLine={false} tick={axisTick} />
+                  <Tooltip content={<SimpleTooltip />} cursor={hoverCursor} />
+                  <Bar dataKey="value" radius={[0, 8, 8, 0]} maxBarSize={26}>
                     {stats.severityDistribution.map((entry) => (
                       <Cell key={entry.name} fill={severityColors[entry.name]} />
                     ))}
@@ -375,12 +437,18 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
           <ChartFrame title="Service Exposure" description="Services with the widest open-port footprint." accent="primary">
             {stats.topServices.length ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.topServices} layout="vertical" margin={{ left: 20, right: 18 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
-                  <YAxis type="category" dataKey="name" width={96} tickLine={false} axisLine={false} />
-                  <Tooltip content={<SimpleTooltip />} />
-                  <Bar dataKey="value" fill="#0f9f8f" radius={[0, 6, 6, 0]} />
+                <BarChart data={stats.topServices} layout="vertical" margin={{ left: 20, right: 24 }}>
+                  <defs>
+                    <linearGradient id="serviceExposureGradient" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor={RED} stopOpacity={0.5} />
+                      <stop offset="100%" stopColor={RED} stopOpacity={1} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={gridStroke} />
+                  <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} tick={axisTick} />
+                  <YAxis type="category" dataKey="name" width={96} tickLine={false} axisLine={false} tick={axisTick} />
+                  <Tooltip content={<SimpleTooltip />} cursor={hoverCursor} />
+                  <Bar dataKey="value" fill="url(#serviceExposureGradient)" radius={[0, 8, 8, 0]} maxBarSize={26} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -388,16 +456,22 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
             )}
           </ChartFrame>
 
-          <ChartFrame title="Host Impact Matrix" description="Findings and open ports per highest-risk host." accent="amber">
+          <ChartFrame title="Host Impact Matrix" description="Findings and open ports per highest-risk host." accent="muted">
             {hostImpact.length ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={hostImpact} layout="vertical" margin={{ left: 24, right: 18 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
-                  <YAxis type="category" dataKey="name" width={104} tickLine={false} axisLine={false} />
-                  <Tooltip content={<SimpleTooltip />} />
-                  <Bar dataKey="vulnerabilities" name="Findings" fill="#e11d48" radius={[0, 6, 6, 0]} />
-                  <Bar dataKey="openPorts" name="Open ports" fill="#eab308" radius={[0, 6, 6, 0]} />
+                <BarChart data={hostImpact} layout="vertical" margin={{ left: 24, right: 24, top: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={gridStroke} />
+                  <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} tick={axisTick} />
+                  <YAxis type="category" dataKey="name" width={104} tickLine={false} axisLine={false} tick={axisTick} />
+                  <Tooltip content={<SimpleTooltip />} cursor={hoverCursor} />
+                  <Legend
+                    verticalAlign="top"
+                    height={28}
+                    iconType="circle"
+                    wrapperStyle={{ fontSize: 12, color: "#a1a1aa" }}
+                  />
+                  <Bar dataKey="vulnerabilities" name="Findings" fill={RED} radius={[0, 8, 8, 0]} maxBarSize={14} />
+                  <Bar dataKey="openPorts" name="Open ports" fill={GRAY_LIGHT} radius={[0, 8, 8, 0]} maxBarSize={14} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -405,18 +479,25 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
             )}
           </ChartFrame>
 
-          <ChartFrame title="Reachability Split" description="Reachable and unreachable hosts in the current scope." accent="cyan">
+          <ChartFrame title="Reachability Split" description="Reachable and unreachable hosts in the current scope." accent="success">
             {stats.hostStatus.length ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={stats.hostStatus} dataKey="value" nameKey="name" innerRadius={58} outerRadius={92} paddingAngle={3}>
-                    {stats.hostStatus.map((entry, index) => (
-                      <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<SimpleTooltip />} />
-                </PieChart>
-              </ResponsiveContainer>
+              <DonutChart data={stats.hostStatus} colors={reachabilityColors} totalLabel="hosts" />
+            ) : (
+              <EmptyChart />
+            )}
+          </ChartFrame>
+
+          <ChartFrame title="Port State Breakdown" description="Open ports carry exposure; closed ports don't." accent="muted">
+            {stats.portStateDistribution?.length ? (
+              <DonutChart data={stats.portStateDistribution} colors={portStateColors} totalLabel="ports" />
+            ) : (
+              <EmptyChart />
+            )}
+          </ChartFrame>
+
+          <ChartFrame title="Finding Disposition" description="Active findings vs. those triaged as false positives." accent="success">
+            {dispositionData.length ? (
+              <DonutChart data={dispositionData} colors={dispositionColors} totalLabel="findings" />
             ) : (
               <EmptyChart />
             )}
@@ -456,10 +537,11 @@ export default function OverviewDashboard({ dataset, isEmpty, activeSeverities =
         </div>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <StatsCard title="Critical Findings" value={stats.severityCounts.Critical || 0} icon={AlertTriangle} tone="rose" />
-        <StatsCard title="Unreachable Hosts" value={stats.hostsDown} icon={WifiOff} tone="gray" />
-        <StatsCard title="Common CVEs" value={stats.topCves.length} icon={Bug} tone="amber" />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatsCard title="Critical Findings" value={stats.severityCounts.Critical || 0} icon={AlertTriangle} tone="danger" />
+        <StatsCard title="Unreachable Hosts" value={stats.hostsDown} icon={WifiOff} tone="muted" />
+        <StatsCard title="Common CVEs" value={stats.topCves.length} icon={Bug} tone="muted" />
+        <StatsCard title="False Positives" value={falsePositiveCount} icon={ShieldOff} tone="success" detail="Marked and excluded from graphs" />
       </div>
     </div>
   );

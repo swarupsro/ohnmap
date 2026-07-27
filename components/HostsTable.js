@@ -98,7 +98,7 @@ export default function HostsTable({ hosts, onSelectHost }) {
                 </TableCell>
                 <TableCell className="text-muted-foreground">{host.hostname || "-"}</TableCell>
                 <TableCell>
-                  <Badge variant={host.status === "up" ? "default" : "outline"}>{host.status}</Badge>
+                  <Badge variant={host.status === "up" ? "success" : host.status === "down" ? "destructive" : "outline"}>{host.status}</Badge>
                 </TableCell>
                 <TableCell>{host.latency || "-"}</TableCell>
                 <TableCell>{host.openPortsCount || 0}</TableCell>
