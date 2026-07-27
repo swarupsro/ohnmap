@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Braces,
   Bug,
+  ChevronDown,
+  ChevronUp,
   Database,
   FileClock,
   Home,
@@ -24,7 +26,6 @@ import HostsTable from "@/components/HostsTable";
 import OverviewDashboard from "@/components/OverviewDashboard";
 import RawDataView from "@/components/RawDataView";
 import ServicesView from "@/components/ServicesView";
-import ThemeToggle from "@/components/ThemeToggle";
 import ToastProvider, { useToast } from "@/components/ToastProvider";
 import UploadHistory from "@/components/UploadHistory";
 import VulnerabilityDetailsDrawer from "@/components/VulnerabilityDetailsDrawer";
@@ -32,8 +33,8 @@ import VulnerabilityTable from "@/components/VulnerabilityTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { applyFilters, buildDataset, DEFAULT_FILTERS } from "@/lib/analytics";
-import { clearStoredScans, loadStoredScans, saveStoredScans } from "@/lib/storage";
+import { aggregateCves, applyFilters, buildDataset, buildStats, DEFAULT_FILTERS } from "@/lib/analytics";
+import { clearStoredScans, loadFalsePositiveIds, loadStoredScans, saveFalsePositiveIds, saveStoredScans } from "@/lib/storage";
 import { cn, formatDateTime } from "@/lib/utils";
 import { parseNmapText } from "@/parser/nmapTextParser";
 
@@ -56,43 +57,85 @@ function DashboardApp() {
   const [scans, setScans] = useState([]);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [activeView, setActiveView] = useState("overview");
-  const [theme, setTheme] = useState("dark");
   const [parsing, setParsing] = useState(false);
   const [errors, setErrors] = useState([]);
   const [selectedHostId, setSelectedHostId] = useState(null);
   const [selectedVulnerabilityId, setSelectedVulnerabilityId] = useState(null);
+  const [falsePositiveIds, setFalsePositiveIds] = useState(new Set());
+  // null defers to "expanded while empty, collapsed once scans exist"; a boolean is an explicit user override.
+  const [intakeExpanded, setIntakeExpanded] = useState(null);
 
   useEffect(() => {
     setScans(loadStoredScans());
-    const storedTheme = window.localStorage.getItem("nmap-insight-theme");
-    setTheme(storedTheme || "dark");
+    setFalsePositiveIds(new Set(loadFalsePositiveIds()));
   }, []);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-    window.localStorage.setItem("nmap-insight-theme", theme);
-  }, [theme]);
 
   useEffect(() => {
     saveStoredScans(scans);
   }, [scans]);
+
+  useEffect(() => {
+    saveFalsePositiveIds([...falsePositiveIds]);
+  }, [falsePositiveIds]);
 
   const isEmpty = scans.length === 0;
   const activeScans = scans;
   const dataset = useMemo(() => buildDataset(activeScans), [activeScans]);
   const filteredDataset = useMemo(() => applyFilters(dataset, filters), [dataset, filters]);
 
+  // False-positive marks live outside the parsed dataset, so vulnerabilities/hosts are
+  // annotated here and stats/graphs are rebuilt from the non-false-positive subset —
+  // triage should quiet the signal without deleting the underlying finding.
+  const finalDataset = useMemo(() => {
+    const vulnerabilities = filteredDataset.vulnerabilities.map((finding) => ({
+      ...finding,
+      isFalsePositive: falsePositiveIds.has(finding.id)
+    }));
+    const activeVulnerabilities = vulnerabilities.filter((finding) => !finding.isFalsePositive);
+    const hosts = filteredDataset.hosts.map((host) => ({
+      ...host,
+      vulnerabilities: (host.vulnerabilities || []).map((finding) => ({
+        ...finding,
+        isFalsePositive: falsePositiveIds.has(finding.id)
+      }))
+    }));
+    const cves = aggregateCves(activeVulnerabilities);
+    return {
+      ...filteredDataset,
+      vulnerabilities,
+      hosts,
+      cves,
+      stats: {
+        ...buildStats(hosts, filteredDataset.ports, activeVulnerabilities, cves, filteredDataset.scans),
+        falsePositiveCount: vulnerabilities.length - activeVulnerabilities.length
+      }
+    };
+  }, [filteredDataset, falsePositiveIds]);
+
+  const toggleFalsePositive = (findingId) => {
+    setFalsePositiveIds((current) => {
+      const next = new Set(current);
+      if (next.has(findingId)) {
+        next.delete(findingId);
+      } else {
+        next.add(findingId);
+      }
+      return next;
+    });
+  };
+
   // Hosts/findings are recomputed (and can be re-merged) on every scans change, so the
   // drawers look the selected id up live each render instead of holding a stale object
   // reference from whichever render they were opened on.
   const selectedHost = useMemo(
-    () => (selectedHostId ? filteredDataset.hosts.find((host) => host.id === selectedHostId) || null : null),
-    [filteredDataset, selectedHostId]
+    () => (selectedHostId ? finalDataset.hosts.find((host) => host.id === selectedHostId) || null : null),
+    [finalDataset, selectedHostId]
   );
   const selectedVulnerability = useMemo(
-    () => (selectedVulnerabilityId ? filteredDataset.vulnerabilities.find((finding) => finding.id === selectedVulnerabilityId) || null : null),
-    [filteredDataset, selectedVulnerabilityId]
+    () => (selectedVulnerabilityId ? finalDataset.vulnerabilities.find((finding) => finding.id === selectedVulnerabilityId) || null : null),
+    [finalDataset, selectedVulnerabilityId]
   );
+  const showIntake = intakeExpanded === null ? isEmpty : intakeExpanded;
 
   const handleFiles = async (files) => {
     setParsing(true);
@@ -173,60 +216,92 @@ function DashboardApp() {
     if (activeView === "overview") {
       return (
         <div className="space-y-6">
-          <div className="grid gap-4 xl:grid-cols-[minmax(360px,520px)_1fr]">
-            <FileUploadCard
-              onFiles={handleFiles}
-              recentFiles={scans}
-              parsing={parsing}
-              onReset={resetOldData}
-              canReset={Boolean(scans.length)}
-            />
+          {showIntake ? (
+            <>
+              <div className="grid gap-4 xl:grid-cols-[minmax(360px,520px)_1fr]">
+                <FileUploadCard
+                  onFiles={handleFiles}
+                  recentFiles={scans}
+                  parsing={parsing}
+                  onReset={resetOldData}
+                  canReset={Boolean(scans.length)}
+                />
+                <Card className="overflow-hidden">
+                  <CardHeader className="border-b border-border/70">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <CardTitle>Scan Intake</CardTitle>
+                        <CardDescription>Parse scope, command metadata, and local data controls.</CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={isEmpty ? "outline" : "secondary"}>{isEmpty ? "Ready" : "Local data"}</Badge>
+                        {!isEmpty ? (
+                          <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setIntakeExpanded(false)}>
+                            <ChevronUp className="h-3.5 w-3.5" />
+                            Hide
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="grid gap-3 p-5 sm:grid-cols-2">
+                    <div className="rounded-lg border border-border/70 bg-muted/30 p-4">
+                      <p className="text-xs font-medium text-muted-foreground">Latest upload</p>
+                      <p className="mt-1 truncate font-semibold">
+                        {scans[0]?.fileName || "No scan uploaded"}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">{scans[0]?.uploadedAt ? formatDateTime(scans[0]?.uploadedAt) : "Waiting for first scan"}</p>
+                    </div>
+                    <div className="rounded-lg border border-border/70 bg-muted/30 p-4">
+                      <p className="text-xs font-medium text-muted-foreground">Nmap version</p>
+                      <p className="mt-1 font-semibold">{activeScans[0]?.nmapVersion || "Unknown"}</p>
+                    </div>
+                    <div className="rounded-lg border border-border/70 bg-muted/30 p-4 sm:col-span-2">
+                      <p className="text-xs font-medium text-muted-foreground">Command</p>
+                      <pre className="mt-2 max-h-28 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border/70 bg-background p-3 font-mono text-xs leading-5">
+                        {activeScans[0]?.command || "Command metadata unavailable"}
+                      </pre>
+                    </div>
+                    <div className="rounded-lg border border-border/70 bg-muted/30 p-4">
+                      <p className="text-xs font-medium text-muted-foreground">Stored scans</p>
+                      <p className="mt-1 text-2xl font-semibold tabular-nums">{scans.length}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Reset removes browser-stored scan history.</p>
+                    </div>
+                    <div className="flex flex-col justify-between gap-3 rounded-lg border border-border/70 bg-muted/30 p-4">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Data controls</p>
+                      <p className="mt-1 text-sm text-muted-foreground">Clear old uploads before starting a fresh review.</p>
+                      </div>
+                      <Button variant="destructive" size="sm" className="gap-2 self-start" disabled={!scans.length} onClick={resetOldData}>
+                        <RotateCcw className="h-4 w-4" />
+                        Reset old data
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          ) : (
             <Card className="overflow-hidden">
-              <CardHeader className="border-b border-border/70">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <CardTitle>Scan Intake</CardTitle>
-                    <CardDescription>Parse scope, command metadata, and local data controls.</CardDescription>
+              <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <ScanSearch className="h-5 w-5" />
                   </div>
-                  <Badge variant={isEmpty ? "outline" : "secondary"}>{isEmpty ? "Ready" : "Local data"}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="grid gap-3 p-5 sm:grid-cols-2">
-                <div className="rounded-lg border border-border/70 bg-muted/30 p-4">
-                  <p className="text-xs font-medium text-muted-foreground">Latest upload</p>
-                  <p className="mt-1 truncate font-semibold">
-                    {scans[0]?.fileName || "No scan uploaded"}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">{scans[0]?.uploadedAt ? formatDateTime(scans[0]?.uploadedAt) : "Waiting for first scan"}</p>
-                </div>
-                <div className="rounded-lg border border-border/70 bg-muted/30 p-4">
-                  <p className="text-xs font-medium text-muted-foreground">Nmap version</p>
-                  <p className="mt-1 font-semibold">{activeScans[0]?.nmapVersion || "Unknown"}</p>
-                </div>
-                <div className="rounded-lg border border-border/70 bg-muted/30 p-4 sm:col-span-2">
-                  <p className="text-xs font-medium text-muted-foreground">Command</p>
-                  <pre className="mt-2 max-h-28 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border/70 bg-background p-3 font-mono text-xs leading-5">
-                    {activeScans[0]?.command || "Command metadata unavailable"}
-                  </pre>
-                </div>
-                <div className="rounded-lg border border-border/70 bg-muted/30 p-4">
-                  <p className="text-xs font-medium text-muted-foreground">Stored scans</p>
-                  <p className="mt-1 text-2xl font-semibold tabular-nums">{scans.length}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Reset removes browser-stored scan history.</p>
-                </div>
-                <div className="flex flex-col justify-between gap-3 rounded-lg border border-border/70 bg-muted/30 p-4">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Data controls</p>
-                  <p className="mt-1 text-sm text-muted-foreground">Clear old uploads before starting a fresh review.</p>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{scans[0]?.fileName || "Scan data loaded"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {scans.length} stored scan{scans.length === 1 ? "" : "s"} · {scans[0]?.uploadedAt ? formatDateTime(scans[0].uploadedAt) : "Unknown upload time"}
+                    </p>
                   </div>
-                  <Button variant="destructive" size="sm" className="gap-2 self-start" disabled={!scans.length} onClick={resetOldData}>
-                    <RotateCcw className="h-4 w-4" />
-                    Reset old data
-                  </Button>
                 </div>
+                <Button variant="outline" size="sm" className="shrink-0 gap-2" onClick={() => setIntakeExpanded(true)}>
+                  <ChevronDown className="h-4 w-4" />
+                  Upload & scan intake
+                </Button>
               </CardContent>
             </Card>
-          </div>
+          )}
 
           {errors.length ? (
             <Card className="border-destructive/40">
@@ -245,7 +320,7 @@ function DashboardApp() {
           ) : null}
 
           <OverviewDashboard
-            dataset={filteredDataset}
+            dataset={finalDataset}
             isEmpty={isEmpty}
             activeSeverities={filters.severities}
             onSeverityToggle={toggleSeverityFilter}
@@ -256,14 +331,15 @@ function DashboardApp() {
     }
 
     if (activeView === "hosts") {
-      return <HostsTable hosts={filteredDataset.hosts} onSelectHost={(host) => setSelectedHostId(host.id)} />;
+      return <HostsTable hosts={finalDataset.hosts} onSelectHost={(host) => setSelectedHostId(host.id)} />;
     }
 
     if (activeView === "vulnerabilities") {
       return (
         <VulnerabilityTable
-          vulnerabilities={filteredDataset.vulnerabilities}
+          vulnerabilities={finalDataset.vulnerabilities}
           onSelectVulnerability={(finding) => setSelectedVulnerabilityId(finding.id)}
+          onToggleFalsePositive={toggleFalsePositive}
         />
       );
     }
@@ -271,15 +347,15 @@ function DashboardApp() {
     if (activeView === "cves") {
       return (
         <CVEAccordion
-          cves={filteredDataset.cves}
-          vulnerabilities={filteredDataset.vulnerabilities}
+          cves={finalDataset.cves}
+          vulnerabilities={finalDataset.vulnerabilities}
           onSelectVulnerability={(finding) => setSelectedVulnerabilityId(finding.id)}
         />
       );
     }
 
     if (activeView === "services") {
-      return <ServicesView ports={filteredDataset.ports} vulnerabilities={filteredDataset.vulnerabilities} />;
+      return <ServicesView ports={finalDataset.ports} vulnerabilities={finalDataset.vulnerabilities} />;
     }
 
     if (activeView === "history") {
@@ -345,7 +421,6 @@ function DashboardApp() {
               <RotateCcw className="h-3.5 w-3.5" />
               Reset
             </Button>
-            <ThemeToggle theme={theme} onChange={setTheme} />
           </div>
         </div>
       </aside>
@@ -376,10 +451,7 @@ function DashboardApp() {
                   <Printer className="h-4 w-4" />
                   Print
                 </Button>
-                <ExportMenu dataset={dataset} filteredDataset={filteredDataset} />
-                <div className="lg:hidden">
-                  <ThemeToggle theme={theme} onChange={setTheme} />
-                </div>
+                <ExportMenu dataset={dataset} filteredDataset={finalDataset} />
               </div>
             </div>
 
@@ -415,6 +487,7 @@ function DashboardApp() {
         finding={selectedVulnerability}
         open={Boolean(selectedVulnerability)}
         onOpenChange={(open) => !open && setSelectedVulnerabilityId(null)}
+        onToggleFalsePositive={toggleFalsePositive}
       />
     </div>
   );

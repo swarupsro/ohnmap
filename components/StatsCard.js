@@ -8,10 +8,9 @@ import { cn } from "@/lib/utils";
 export default function StatsCard({ title, value, icon: Icon, detail, tone = "default", active = false, onClick }) {
   const tones = {
     default: "bg-primary/10 text-primary",
-    rose: "bg-rose-500/10 text-rose-600 dark:text-rose-300",
-    amber: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
-    teal: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
-    gray: "bg-slate-500/10 text-slate-600 dark:text-slate-300"
+    danger: "bg-destructive/10 text-destructive",
+    success: "bg-success/10 text-success",
+    muted: "bg-muted text-muted-foreground"
   };
 
   const Wrapper = onClick ? motion.button : motion.div;
