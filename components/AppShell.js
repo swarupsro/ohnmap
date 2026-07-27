@@ -325,6 +325,9 @@ function DashboardApp() {
             activeSeverities={filters.severities}
             onSeverityToggle={toggleSeverityFilter}
             onOpenView={setActiveView}
+            onSelectHost={(host) => setSelectedHostId(host.id)}
+            onSelectVulnerability={(finding) => setSelectedVulnerabilityId(finding.id)}
+            onToggleFalsePositive={toggleFalsePositive}
           />
         </div>
       );
